@@ -1,6 +1,6 @@
 import request from '@/utils/request'
 // 定义基本的url
-const BASE_URL = '/admin/system/sysRole';
+const BASE_URL = '/admin/system/sysMenu';
 
 export default {
     /*

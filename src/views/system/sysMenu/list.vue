@@ -6,6 +6,7 @@
         >添 加</el-button
       >
     </div>
+    
     <el-table
       :data="sysMenuList"
       style="width: 100%; margin-bottom: 20px; margin-top: 10px"
