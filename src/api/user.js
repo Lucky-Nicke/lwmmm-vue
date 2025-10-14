@@ -12,7 +12,9 @@ export function getInfo(token) {
   return request({
     url: '/admin/system/index/info',
     method: 'get',
-    params: { token }
+    headers: {
+      token: token 
+    }
   })
 }
 
