@@ -4,50 +4,50 @@ import request from '@/utils/request'
 const BASE_URL = '/admin/system/sysMovie';
 
 
-export default{
+export default {
   // 当前 页码  每页条数   搜索条件
-  getMoviePageInfo(page,limit,searchObj){
+  getMoviePageInfo(page, limit, searchObj) {
     return request({
-      url:`${BASE_URL}/${page}/${limit}`,
+      url: `${BASE_URL}/${page}/${limit}`,
       method: 'get',
-      params:searchObj
+      params: searchObj
     })
   },
   // 根据id移除一个movie
-  removeMovieById(id){
+  removeMovieById(id) {
     return request({
-      url:`${BASE_URL}/removeMovie/${id}`,
+      url: `${BASE_URL}/removeMovie/${id}`,
       method: 'delete'
     })
   },
   // 添加影视
-  addMovie(movie){
+  addMovie(movie) {
     console.log(movie);
     return request({
-      url:`${BASE_URL}/addMovie`,
+      url: `${BASE_URL}/addMovie`,
       method: 'post',
-      data:movie
+      data: movie
     })
   },
   // 更新影视
-  updateMovie(movie){
+  updateMovie(movie) {
     return request({
-      url:`${BASE_URL}/updateMovie`,
+      url: `${BASE_URL}/updateMovie`,
       method: 'post',
-      data:movie
+      data: movie
     })
   },
   // 根据id获取一个movie
-  getMovieById(id){
+  getMovieById(id) {
     return request({
-      url:`${BASE_URL}/findMovieById/${id}`,
+      url: `${BASE_URL}/findMovieById/${id}`,
       method: 'get'
     })
   },
   // 根据id获取palyAuth播放凭证
-  getPlayAuthById(id){
+  getPlayAuthById(id) {
     return request({
-      url:`${BASE_URL}/getPlayAuth/${id}`,
+      url: `${BASE_URL}/getPlayAuth/${id}`,
       method: 'get'
     })
   }

@@ -150,7 +150,7 @@
 
       <el-table-column prop="image" label="剧照">
         <template slot-scope="scope">
-          <viewer>
+          <viewer :images="scope.row.image">
             <img :src="scope.row.image" alt="" style="height: 80px" />
           </viewer>
         </template>
@@ -257,13 +257,10 @@ export default {
     //图片上传成功的钩子函数
     handleImageSuccess(res, file) {
       console.log(res); // 得到的是图片地址
-      console.log(file); // 得到是一个对象
 
       this.loading = false;
       if (file.response != "") {
-        // this.sysMovie.image = file.response.data;
-        this.sysMovie.image = file.response.data;
-        console.log(this.sysMovie.image);
+        this.sysMovie.image = file.response;
 
         this.$message({
           type: "info",
@@ -281,7 +278,8 @@ export default {
     handleVideoSuccess(res, file) {
       this.loading = false;
       if (file.response != "") {
-        this.sysMovie.playId = file.response.data;
+        console.log(file); // 得到是一个对象
+        this.sysMovie.playId = file.response;
         this.$message({
           type: "info",
           message: "视频上传成功",
