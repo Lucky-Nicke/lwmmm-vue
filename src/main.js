@@ -20,6 +20,7 @@ import 'viewerjs/dist/viewer.css'
 import VueViewer from 'v-viewer'
 import 'aliyun-aliplayer/build/skins/default/aliplayer-min.css';
 import Aliplayer from 'aliyun-aliplayer';
+import * as echarts from 'echarts';
 Vue.prototype.$hasBP = hasBtnPermission
 /**
  * If you don't want to use mock-server
@@ -38,6 +39,7 @@ if (process.env.NODE_ENV === 'production') {
 Vue.use(ElementUI, { locale })
 Vue.use(VueViewer)
 Vue.prototype.$Aliplayer = Aliplayer
+Vue.prototype.$echarts = echarts;
 // 如果想要中文版 element-ui，按如下方式声明
 // Vue.use(ElementUI)
 
