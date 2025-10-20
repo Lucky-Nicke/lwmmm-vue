@@ -3,17 +3,23 @@
     <!-- 搜索框 -->
     <div class="search-div" style="margin: 20px 10px -5px 20px; border: 1px">
       <el-row>
-        <el-col :span="20">
+        <el-col :span="24">
           <el-form :inline="true" class="demo-form-inline">
-            <el-form-item label="登录用户名">
+            <el-form-item label="标题">
               <el-input
-                v-model="searchObj.username"
+                v-model="searchObj.title"
                 placeholder="输入关键字"
                 style="width: 100%"
               ></el-input>
             </el-form-item>
-            &nbsp;&nbsp;&nbsp;
-            <el-form-item label="登录时间">
+            <el-form-item label="操作人员">
+              <el-input
+                v-model="searchObj.operName"
+                placeholder="输入关键字"
+                style="width: 100%"
+              ></el-input>
+            </el-form-item>
+            <el-form-item label="操作时间">
               <el-date-picker
                 v-model="createTimes"
                 type="datetimerange"
@@ -25,11 +31,7 @@
               />
             </el-form-item>
             <el-form-item>
-              <el-button
-                type="primary"
-                icon="el-icon-search"
-                @click="load(1)"
-                :disabled="$hasBP('bnt.sysLoginLog.list') === false"
+              <el-button type="primary" icon="el-icon-search" @click="load(1)"
                 >搜索</el-button
               >
               <el-button icon="el-icon-refresh" @click="resetData"
@@ -40,16 +42,13 @@
         </el-col>
       </el-row>
     </div>
+
+    <div style="margin: 10px 30px; border: 1px">
+      <el-button type="danger" @click="batchRemove()">批量删除</el-button>
+    </div>
+
     <!-- 表格 -->
     <div>
-      <el-col :span="4">
-        <el-button
-          style="margin: 0 0 10px 30px"
-          type="danger"
-          @click="batchRemove()"
-          >批量删除</el-button
-        >
-      </el-col>
       <el-table
         v-loading="loading"
         :data="tableData"
@@ -60,41 +59,91 @@
       >
         <el-table-column type="selection" align="center" width="80">
         </el-table-column>
-        <el-table-column label="序号" width="120" align="center">
+        <el-table-column label="序号" width="120" align="center" fixed>
           <template slot-scope="scope">
             {{ (pageNum - 1) * limit + scope.$index + 1 }}
           </template>
         </el-table-column>
-        <el-table-column
-          prop="username"
-          label="用户账号"
-          width="250"
-          align="center"
-        >
+        <el-table-column prop="title" label="标题" width="120" align="center">
         </el-table-column>
         <el-table-column
-          prop="ipaddr"
-          label="登录ip地址"
-          width="250"
+          prop="businessType"
+          label="业务类型"
+          width="170"
           align="center"
         >
-        </el-table-column>
-        <el-table-column
-          prop="status"
-          label="登录状态"
-          width="180"
-          align="center"
-          :value="tableData.status"
-        >
-          <!-- 使用scope获取列的数据，结合if进行判断 -->
           <template slot-scope="scope">
-            <span v-if="scope.row.status == 0">登录成功</span>
-            <span v-if="scope.row.status == 1">登录失败</span>
+            <span v-if="scope.row.businessType === 'OTHER'">其他</span>
+            <span v-if="scope.row.businessType === 'INSERT'">新增</span>
+            <span v-if="scope.row.businessType === 'UPDATE'">修改</span>
+            <span v-if="scope.row.businessType === 'DELETE'">删除</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="method" label="方法名称" width="200">
+        </el-table-column>
+        <el-table-column
+          prop="requestMethod"
+          label="请求方式"
+          width="150"
+          align="center"
+        >
+        </el-table-column>
+        <el-table-column
+          prop="operatorType"
+          label="操作类别"
+          width="120"
+          align="center"
+        >
+          <template slot-scope="scope">
+            <span v-if="scope.row.operatorType === 'OTHER'">其他</span>
+            <span v-if="scope.row.operatorType === 'MANAGE'">后台用户</span>
+            <span v-if="scope.row.operatorType === 'MOBILE'">手机端用户</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          prop="operName"
+          label="操作人员"
+          width="150"
+          align="center"
+        >
+        </el-table-column>
+        <el-table-column
+          prop="deptName"
+          label="部门名称"
+          width="150"
+          align="center"
+        >
+        </el-table-column>
+        <el-table-column prop="operUrl" label="请求URL" width="200">
+        </el-table-column>
+        <el-table-column prop="operIp" label="主机地址" width="200">
+        </el-table-column>
+        <!-- <el-table-column
+                    prop="operParam"
+                    label="请求参数"
+                    width="200"
+                >
+                </el-table-column> -->
+        <!-- <el-table-column
+                    prop="jsonResult"
+                    label="返回参数"
+                    width="200"
+                >
+                </el-table-column> -->
+        <el-table-column prop="status" label="状态" width="150" align="center">
+          <template slot-scope="scope">
+            <span
+              v-if="scope.row.status === 0 || scope.row.status === 'SUCCESS'"
+              >正常</span
+            >
+            <span v-if="scope.row.status === 1 || scope.row.status === 'FAIL'"
+              >异常</span
+            >
           </template>
         </el-table-column>
         <!-- <el-table-column
-                    prop="accessTime"
-                    label="登录时间"
+                    prop="operTime"
+                    label="操作时间"
                     width="200"
                     align="center"
                 >
@@ -102,11 +151,11 @@
         <el-table-column
           prop="createTime"
           label="创建时间"
-          width="250"
+          width="200"
           align="center"
         >
         </el-table-column>
-        <el-table-column label="操作" width="180" align="center">
+        <el-table-column label="操作" width="120" align="center" fixed="right">
           <template slot-scope="scope">
             <el-button
               type="danger"
@@ -135,19 +184,18 @@
 
 <script>
 //导入api
-import api from "@/api/log/user.js";
+import api from "@/api/openLog/user.js";
 
 export default {
   data() {
     return {
-      tableData: [],
       loading: true,
       pageNum: 1,
       limit: 4,
       total: 0,
       searchObj: {}, //搜索条件
       createTimes: [], //时间【模糊查询条件】
-      sysLoginLog: {},
+      sysOperLog: {},
       selectValueIds: [],
     };
   },
@@ -167,6 +215,7 @@ export default {
         .getLogPageList(this.pageNum, this.limit, this.searchObj)
         .then((res) => {
           console.log(res);
+
           this.loading = false;
           this.tableData = res.data.records;
           this.total = res.data.total;
@@ -182,7 +231,7 @@ export default {
       //判断selectValueIds是否为空
       if (this.selectValueIds.length == 0) {
         this.$message({
-          message: "请选择删除登录日志记录",
+          message: "请选择删除操作日志记录",
           type: "warning",
         });
         return;
@@ -194,7 +243,7 @@ export default {
         //封装ids
         ids.push(this.selectValueIds[i].id);
       }
-      this.$confirm("此操作将永久删除这些登录日志, 是否继续?", "提示", {
+      this.$confirm("此操作将永久删除这些操作日志, 是否继续?", "提示", {
         confirmButtonText: "确定",
         cancelButtonText: "取消",
         type: "warning",
@@ -210,18 +259,16 @@ export default {
         });
       });
     },
-    // 重置
+    //重置
     resetData() {
-      // 清空所有搜索条件
-      this.searchObj = {}; // 清空搜索对象
-      this.createTimes = []; // 清空时间范围
-      this.pageNum = 1; // 重置页码为第一页
-      // 重新加载数据
+      // 清空表单
+      this.searchObj = "";
+      // 再次刷新列表数据
       this.load(1);
     },
     //删除操作
     removeDataById(id) {
-      this.$confirm("此操作将永久删除该登录日志, 是否继续?", "提示", {
+      this.$confirm("此操作将永久删除该操作日志, 是否继续?", "提示", {
         confirmButtonText: "确定",
         cancelButtonText: "取消",
         type: "warning",

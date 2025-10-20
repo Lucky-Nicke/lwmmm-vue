@@ -1,6 +1,6 @@
 import request from '@/utils/request'
 // 定义基本的url
-const BASE_URL = '/admin/system/record';
+const BASE_URL = '/admin/system/openrecord';
 
 export default {
     // 查询用户和分页
