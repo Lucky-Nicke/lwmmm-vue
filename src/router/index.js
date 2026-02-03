@@ -37,6 +37,12 @@ export const constantRoutes = [
     hidden: true
   },
 
+  {
+    path: '/reset-password',
+    component: () => import('@/views/login/reset'), // 确保文件名叫 reset.vue
+    hidden: true
+  },
+
   // {
   //   path: '/404',
   //   component: () => import('@/views/404'),

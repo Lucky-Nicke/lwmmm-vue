@@ -71,5 +71,13 @@ export default {
             method: 'post',
             data: assginRoleVo
         })
+    },
+
+    resetPassword(data) {
+        return request({
+            url: `${BASE_URL}/changePwd`, // 你的接口地址
+            method: 'post',
+            data
+        })
     }
 }

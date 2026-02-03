@@ -3,7 +3,7 @@
     <el-form ref="loginForm" :model="loginForm" :rules="loginRules" class="login-form" auto-complete="on" label-position="left">
 
       <div class="title-container">
-        <h3 class="title">Login Form</h3>
+        <h3 class="title">影视管理系统后台</h3>
       </div>
 
       <el-form-item prop="username">
@@ -41,14 +41,21 @@
         </span>
       </el-form-item>
 
-      <el-button :loading="loading" type="primary" style="width:100%;margin-bottom:30px;" @click.native.prevent="handleLogin">Login</el-button>
+      <el-button :loading="loading" type="primary" style="width:100%;margin-bottom:20px;" @click.native.prevent="handleLogin">Login</el-button>
 
-      <div class="tips">
-        <span style="margin-right:20px;">username: admin</span>
-        <span> password: any</span>
+      <div class="tips" style="text-align: right; margin-top: 10px;">
+        <!-- 使用 router-link 进行跳转 -->
+        <router-link to="/reset-password" style="color: #eee; cursor: pointer;">
+          <span style="border-bottom: 1px solid #999;">忘记密码?</span>
+        </router-link>
       </div>
 
     </el-form>
+
+    <!-- 版权脚注 -->
+    <div class="footer">
+      <p>Copyright © 2026 Lucky_Nicke All Rights Reserved.</p>
+    </div>
   </div>
 </template>
 
@@ -67,7 +74,7 @@ export default {
     }
     const validatePassword = (rule, value, callback) => {
       if (value.length < 6) {
-        callback(new Error('The password can not be less than 6 digits'))
+        callback(new Error('密码长度不能少于6位'))
       } else {
         callback()
       }
@@ -126,12 +133,10 @@ export default {
 </script>
 
 <style lang="scss">
-/* 修复input 背景不协调 和光标变色 */
-/* Detail see https://github.com/PanJiaChen/vue-element-admin/pull/927 */
+/* --- 核心修复：Global CSS --- */
 
-$bg:#283443;
-$light_gray:#fff;
 $cursor: #fff;
+$input_bg: transparent; 
 
 @supports (-webkit-mask: none) and (not (cater-color: $cursor)) {
   .login-container .el-input input {
@@ -141,61 +146,104 @@ $cursor: #fff;
 
 /* reset element-ui css */
 .login-container {
+  // 1. 设置 el-input 宽度占满剩余空间
   .el-input {
-    display: inline-block;
-    height: 47px;
-    width: 85%;
-
+    flex: 1; // 关键：让输入框自动填满除去图标外的剩余宽度
+    width: auto; // 重置掉原来的固定宽度或百分比
+    
     input {
-      background: transparent;
+      background: $input_bg;
       border: 0px;
       -webkit-appearance: none;
       border-radius: 0px;
-      padding: 12px 5px 12px 15px;
-      color: $light_gray;
+      padding: 12px 5px 12px 5px; // 稍微调整padding
+      color: $cursor;
       height: 47px;
       caret-color: $cursor;
 
       &:-webkit-autofill {
-        box-shadow: 0 0 0px 1000px $bg inset !important;
+        box-shadow: 0 0 0px 1000px rgba(0,0,0,0.2) inset !important; 
         -webkit-text-fill-color: $cursor !important;
+        transition: background-color 50000s ease-in-out 0s; 
       }
     }
   }
 
+  // 2. 核心布局修复：强制同行显示
   .el-form-item {
     border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0.2);
     border-radius: 5px;
     color: #454545;
+    
+    // 使用 Element UI 的深度选择器强制内容区 Flex 布局
+    .el-form-item__content {
+      display: flex !important;
+      align-items: center !important; // 垂直居中
+      width: 100%;
+      line-height: 47px; // 保持行高一致
+      position: relative;
+    }
   }
 }
 </style>
 
 <style lang="scss" scoped>
+/* --- 页面样式优化 --- */
+
 $bg:#2d3a4b;
 $dark_gray:#889aa4;
 $light_gray:#eee;
 
+// --- 底部版权区域 ---
+  .footer {
+    position: absolute;
+    bottom: 20px;
+    width: 100%;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 15px;
+    letter-spacing: 1px;
+    
+    p {
+      margin: 0;
+    }
+  }
+
 .login-container {
-  min-height: 100%;
+  min-height: 100vh;
   width: 100%;
-  background-color: $bg;
+  
+  background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-size: cover;
+  background-position: center;
   overflow: hidden;
+  
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   .login-form {
     position: relative;
-    width: 520px;
+    width: 450px;
     max-width: 100%;
-    padding: 160px 35px 0;
-    margin: 0 auto;
-    overflow: hidden;
+    
+    background: rgba(255, 255, 255, 0.1); 
+    backdrop-filter: blur(10px);          
+    -webkit-backdrop-filter: blur(10px);  
+    border-radius: 16px; 
+    border: 1px solid rgba(255, 255, 255, 0.2); 
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37); 
+    
+    padding: 40px 35px;
+    margin: 0; 
   }
 
   .tips {
     font-size: 14px;
-    color: #fff;
+    color: #ddd; 
     margin-bottom: 10px;
+    text-align: center; 
 
     span {
       &:first-of-type {
@@ -205,33 +253,64 @@ $light_gray:#eee;
   }
 
   .svg-container {
-    padding: 6px 5px 6px 15px;
+    padding: 0 15px; // 调整左右间距
     color: $dark_gray;
     vertical-align: middle;
     width: 30px;
-    display: inline-block;
+    display: flex; // 自身也居中
+    align-items: center;
+    justify-content: center;
   }
 
   .title-container {
     position: relative;
 
     .title {
-      font-size: 26px;
-      color: $light_gray;
-      margin: 0px auto 40px auto;
+      font-size: 28px;
+      color: #fff;
+      margin: 0px auto 30px auto;
       text-align: center;
-      font-weight: bold;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
   }
 
+  // 修改眼睛图标位置
   .show-pwd {
     position: absolute;
     right: 10px;
-    top: 7px;
+    // top: 7px;  // 删掉 top，用 Flex 下的自动居中或者 transform
+    top: 50%;     // 设为 50%
+    transform: translateY(-50%); // 向上偏移一半，绝对垂直居中
     font-size: 16px;
     color: $dark_gray;
     cursor: pointer;
     user-select: none;
+    height: 100%; // 确保点击区域够大
+    display: flex;
+    align-items: center; // 内部图标居中
+  }
+  
+  ::v-deep .el-form-item {
+    background: rgba(0, 0, 0, 0.2); 
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px; 
+    margin-bottom: 22px; 
+  }
+
+  ::v-deep .el-button--primary {
+    background: linear-gradient(90deg, #00d2ff 0%, #3a7bd5 100%); 
+    border: none;
+    height: 45px;
+    font-size: 16px;
+    border-radius: 8px;
+    transition: all 0.3s;
+    
+    &:hover {
+        transform: scale(1.02); 
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
   }
 }
 </style>
