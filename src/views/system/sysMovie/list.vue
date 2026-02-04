@@ -150,9 +150,10 @@
 
       <el-table-column prop="image" label="剧照">
         <template slot-scope="scope">
-          <viewer :images="scope.row.image">
-            <img :src="scope.row.image" alt="" style="height: 80px" />
+          <viewer v-if="scope.row.image" :images="scope.row.image">
+            <img alt="头像" :src="scope.row.image" style="height: 80px" />
           </viewer>
+          <span v-else style="color: #999; font-size: 12px">暂无图片</span>
         </template>
       </el-table-column>
 

@@ -1,5 +1,5 @@
 <template>
-  <div class="app-container">
+  <div v-loading="loading" element-loading-text="文件上传中......">
     <!--搜索栏-->
     <div class="search-div">
       <el-form label-width="70px" size="small">
@@ -73,6 +73,31 @@
         <el-form-item label="手机" prop="phone">
           <el-input v-model="sysUser.phone" />
         </el-form-item>
+
+        <!-- 新增备注文本域 -->
+        <el-form-item label="备 注" prop="description">
+          <el-input
+            v-model="sysUser.description"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入备注信息"
+          />
+        </el-form-item>
+
+        <!-- 新增头像上传项 -->
+        <el-form-item label="影视图片" prop="image">
+          <el-upload
+            class="upload-demo"
+            name="uploadImage"
+            action="http://localhost:8085/admin/system/upload/uploadImage"
+            :limit="1"
+            :on-success="handleImageSuccess"
+            :before-upload="handleBeforeUpload"
+            :show-file-list="false"
+          >
+            <el-button size="small" type="primary">点击上传</el-button>
+          </el-upload>
+        </el-form-item>
       </el-form>
       <span slot="footer" class="dialog-footer">
         <el-button
@@ -119,7 +144,35 @@
           </el-switch>
         </template>
       </el-table-column>
-      <el-table-column prop="createTime" label="创建时间" />
+
+      <!-- 图片（头像）列 -->
+      <el-table-column label="头像" width="120" align="center">
+        <template slot-scope="scope">
+          <viewer v-if="scope.row.headUrl" :images="scope.row.headUrl">
+            <img
+              :src="scope.row.headUrl"
+              alt="头像"
+              style="
+                height: 80px;
+                width: 80px;
+                object-fit: cover;
+                border-radius: 4px;
+              "
+            />
+          </viewer>
+          <span v-else style="color: #999; font-size: 12px">暂无图片</span>
+        </template>
+      </el-table-column>
+
+      <!-- 新增备注列 -->
+      <el-table-column
+        prop="description"
+        label="备注"
+        min-width="75"
+        show-overflow-tooltip
+      />
+
+      <el-table-column prop="createTime" min-width="65" label="创建时间" />
 
       <el-table-column label="操作" align="center" fixed="right">
         <template slot-scope="scope">
@@ -152,9 +205,11 @@
     <el-pagination
       :current-page="page"
       :page-size="limit"
-      layout="total, prev,pager, next, jumper"
+      layout="total, sizes, prev,pager, next, jumper"
       style="padding: 30px 0; text-align: center"
       @current-change="fetchData"
+      :page-sizes="[5, 10, 20]"
+      @size-change="handleSizeChange"
       :total="total"
     >
     </el-pagination>
@@ -209,12 +264,13 @@ export default {
       listLoading: true, // 数据是否正在加载
       list: [],
       total: 0,
+      loading: false,
       page: 1,
-      limit: 3,
+      limit: 5,
       searchObj: {},
       createTimes: [],
       dialogVisible: false,
-      sysUser: {},
+      sysUser: {}, // 确保后端API返回的数据结构包含 description 字段
       saveBtnDisabled: false,
       dialogRoleVisible: false,
       allRoles: [], // 所有角色列表
@@ -227,6 +283,36 @@ export default {
     this.fetchData();
   },
   methods: {
+    //图片上传成功的钩子函数
+    handleImageSuccess(res, file) {
+      console.log(res); // 得到的是图片地址
+
+      this.loading = false;
+      if (file.response != "") {
+        this.sysUser.headUrl = file.response;
+
+        this.$message({
+          type: "info",
+          message: "图片上传成功",
+          duration: 6000,
+        });
+      } else {
+        this.$message({
+          type: "info",
+          message: "图片上传失败",
+          duration: 6000,
+        });
+      }
+    },
+    //文件开始上传,开始屏幕遮罩
+    handleBeforeUpload() {
+      this.loading = true;
+    },
+    // 处理每页显示条数变化
+    handleSizeChange(val) {
+      this.limit = val; // 更新每页显示条数
+      this.fetchData(1); // 重置页码为1并重新获取数据
+    },
     // 修改状态
     switchStatus(row) {
       // 如果 可用  设置为 不可用  如果不可用  设置为 可用
@@ -244,6 +330,8 @@ export default {
       api.getUserById(id).then((response) => {
         //b.将数据赋值给 sysUser
         this.sysUser = response.data;
+        // 确保后端API返回的用户对象包含 description 字段
+        // console.log('Fetched user:', this.sysUser);
         //c.打开弹框
         this.dialogVisible = true;
       });
@@ -251,6 +339,7 @@ export default {
     //打开弹窗
     add() {
       this.dialogVisible = true;
+      // 关键：清空整个对象，包括可能存在的图片URL和备注
       this.sysUser = {};
     },
     // 添加或者修改
@@ -410,4 +499,27 @@ export default {
 </script>
 
 <style>
+.avatar-uploader .el-upload {
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.avatar-uploader .el-upload:hover {
+  border-color: #409eff;
+}
+.avatar-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+  width: 178px;
+  height: 178px;
+  line-height: 178px;
+  text-align: center;
+}
+.avatar {
+  width: 178px;
+  height: 178px;
+  display: block;
+}
 </style>
