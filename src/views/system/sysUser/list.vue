@@ -59,6 +59,7 @@
         :model="sysUser"
         label-width="100px"
         size="small"
+        :rules="rules"
         style="padding-right: 40px"
       >
         <el-form-item label="用户名" prop="username">
@@ -90,12 +91,16 @@
             class="upload-demo"
             name="uploadImage"
             action="http://localhost:8085/admin/system/upload/uploadImage"
-            :limit="1"
             :on-success="handleImageSuccess"
+            :on-error="handleImageError"
             :before-upload="handleBeforeUpload"
             :show-file-list="false"
+            accept=".jpg,.jpeg,.png"
           >
             <el-button size="small" type="primary">点击上传</el-button>
+            <div slot="tip" class="el-upload__tip">
+              仅支持 jpg / jpeg / png 格式，大小不超过 10MB
+            </div>
           </el-upload>
         </el-form-item>
       </el-form>
@@ -164,7 +169,7 @@
         </template>
       </el-table-column>
 
-      <!-- 新增备注列 -->
+      <!-- 备注列 -->
       <el-table-column
         prop="description"
         label="备注"
@@ -277,6 +282,24 @@ export default {
       userRoleIds: [], // 用户的角色ID的列表
       isIndeterminate: false, // 是否是不确定的
       checkAll: false, // 是否全选
+      rules: {
+        username: [
+          { required: true, message: "请输入用户名", trigger: "blur" },
+        ],
+        password: [
+          { required: true, message: "请输入密码", trigger: "blur" },
+          { min: 6, message: "密码长度不能少于 6 位", trigger: "blur" },
+        ],
+        name: [{ required: true, message: "请输入姓名", trigger: "blur" }],
+        phone: [
+          { required: true, message: "请输入手机号", trigger: "blur" },
+          {
+            pattern: /^1\d{10}$/,
+            message: "手机号必须是 11 位数字",
+            trigger: "blur",
+          },
+        ],
+      },
     };
   },
   created() {
@@ -284,29 +307,54 @@ export default {
   },
   methods: {
     //图片上传成功的钩子函数
+    // 图片上传成功（HTTP 成功，但不一定业务成功）
     handleImageSuccess(res, file) {
-      console.log(res); // 得到的是图片地址
-
       this.loading = false;
-      if (file.response != "") {
-        this.sysUser.headUrl = file.response;
 
-        this.$message({
-          type: "info",
-          message: "图片上传成功",
-          duration: 6000,
-        });
-      } else {
-        this.$message({
-          type: "info",
-          message: "图片上传失败",
-          duration: 6000,
-        });
+      // 业务失败（后端校验没通过）
+      if (res.code !== 200) {
+        this.$message.error(res.data || res.message || "图片上传失败");
+        return;
       }
+
+      // 业务成功
+      this.sysUser.headUrl = res.data; // 后端返回的图片地址
+
+      this.$message.success("图片上传成功");
     },
+
     //文件开始上传,开始屏幕遮罩
-    handleBeforeUpload() {
-      this.loading = true;
+    handleBeforeUpload(file) {
+      return new Promise((resolve, reject) => {
+        // 先校验表单
+        this.$refs.dataForm.validate((valid) => {
+          if (!valid) {
+            this.$message.warning("请先填写完整用户信息，再上传图片");
+            reject(false); // 阻止上传
+            return;
+          }
+
+          // 再校验图片类型
+          const isImage = ["image/jpeg", "image/png"].includes(file.type);
+          const isLt10M = file.size / 1024 / 1024 < 10;
+
+          if (!isImage) {
+            this.$message.error("只支持 jpg / jpeg / png 格式");
+            reject(false);
+            return;
+          }
+
+          if (!isLt10M) {
+            this.$message.error("图片大小不能超过 10MB");
+            reject(false);
+            return;
+          }
+
+          // 全部通过，允许上传
+          this.loading = true;
+          resolve(true);
+        });
+      });
     },
     // 处理每页显示条数变化
     handleSizeChange(val) {
@@ -335,20 +383,50 @@ export default {
         //c.打开弹框
         this.dialogVisible = true;
       });
+
+      this.$nextTick(() => {
+        // 先清掉上一次的校验红字
+        this.$refs.dataForm && this.$refs.dataForm.clearValidate();
+
+        // 再赋值
+        this.sysUser = {
+          ...response.data,
+          password: "", // 编辑时一般不回显密码
+        };
+      });
     },
     //打开弹窗
     add() {
+      this.$nextTick(() => {
+        // 先清掉上一次的校验红字
+        this.$refs.dataForm && this.$refs.dataForm.clearValidate();
+
+        // 再赋值
+        this.sysUser = {
+          ...response.data,
+          password: "", // 编辑时一般不回显密码
+        };
+      });
+
       this.dialogVisible = true;
       // 关键：清空整个对象，包括可能存在的图片URL和备注
       this.sysUser = {};
     },
     // 添加或者修改
     saveOrUpdate() {
-      if (this.sysUser.id != null) {
-        this.updateUser();
-      } else {
-        this.addUser();
-      }
+      this.$refs.dataForm.validate((valid) => {
+        if (!valid) {
+          // 校验不通过，Element 会自动在输入框下面提示
+          return;
+        }
+
+        // 校验通过，再判断是新增还是修改
+        if (this.sysUser.id != null) {
+          this.updateUser();
+        } else {
+          this.addUser();
+        }
+      });
     },
     addUser() {
       api.saveUser(this.sysUser).then((response) => {
