@@ -1,54 +1,83 @@
 <template>
-    <div>
-
-   <!--查询表单-->
-<div class="search-div">
+  <div>
+    <!--查询表单-->
+    <div class="search-div">
       <el-form label-width="70px" size="small">
         <el-row>
           <el-col :span="24">
             <el-form-item label="分类名称">
-              <el-input style="width: 100%" v-model="searchObj.name" placeholder="分类名称"></el-input>
+              <el-input
+                style="width: 100%"
+                v-model="searchObj.name"
+                placeholder="分类名称"
+              ></el-input>
             </el-form-item>
           </el-col>
         </el-row>
-        <el-row style="display:flex">
-          <el-button type="primary" icon="el-icon-search" size="mini"  @click="fetchPageList()">搜索</el-button>
-          <el-button icon="el-icon-refresh" size="mini" @click="resetData">重置</el-button>
+        <el-row style="display: flex">
+          <el-button
+            type="primary"
+            icon="el-icon-search"
+            size="mini"
+            @click="fetchPageList()"
+            >搜索</el-button
+          >
+          <el-button icon="el-icon-refresh" size="mini" @click="resetData"
+            >重置</el-button
+          >
         </el-row>
       </el-form>
     </div>
-        
-            <!-- 工具条 -->
-<div class="tools-div">
-  <el-button type="success" icon="el-icon-plus" size="mini" @click="add">添 加</el-button>
-</div>
 
+    <!-- 工具条 -->
+    <div class="tools-div">
+      <el-button type="success" icon="el-icon-plus" size="mini" @click="add"
+        >添 加</el-button
+      >
+    </div>
 
-<el-dialog title="添加/修改" :visible.sync="dialogVisible" width="40%" >
-      <el-form ref="dataForm" :model="sysCategory" label-width="150px" size="small" style="padding-right: 40px;">
-        <el-form-item label="分类名称">
-          <el-input v-model="sysCategory.name"/>
+    <el-dialog title="添加/修改" :visible.sync="dialogVisible" width="40%">
+      <!-- 修改点1：添加 :rules="rules" -->
+      <el-form
+        ref="dataForm"
+        v-loading="dialogLoading"
+        :rules="rules"
+        :model="sysCategory"
+        label-width="150px"
+        size="small"
+        style="padding-right: 40px"
+      >
+        <!-- 修改点2：添加 prop="name"，对应 data 中的 rules 键名 -->
+        <el-form-item label="分类名称" prop="name">
+          <el-input v-model="sysCategory.name" />
         </el-form-item>
       </el-form>
       <span slot="footer" class="dialog-footer">
-        <el-button @click="dialogVisible = false" size="small" icon="el-icon-refresh-right">取 消</el-button>
-        <el-button type="primary" icon="el-icon-check" @click="saveOrUpdate()" size="small">确 定</el-button>
+        <el-button
+          @click="dialogVisible = false"
+          size="small"
+          icon="el-icon-refresh-right"
+          >取 消</el-button
+        >
+        <el-button
+          type="primary"
+          icon="el-icon-check"
+          @click="saveOrUpdate()"
+          size="small"
+          >确 定</el-button
+        >
       </span>
-</el-dialog>
+    </el-dialog>
 
-
-       <!-- 表格 -->
+    <!-- 表格 -->
     <el-table
       v-loading="listLoading"
       :data="list"
       stripe
       border
-      style="width: 100%;margin-top: 10px;">
-
-      <el-table-column
-        label="序号"
-        width="180"
-        align="center">
+      style="width: 100%; margin-top: 10px"
+    >
+      <el-table-column label="序号" width="180" align="center">
         <template slot-scope="scope">
           {{ (page - 1) * limit + scope.$index + 1 }}
         </template>
@@ -56,141 +85,188 @@
 
       <el-table-column prop="name" label="分类名称" />
       <el-table-column prop="createTime" label="创建时间" />
-       <el-table-column prop="updateTime" label="修改时间" width="200"/>
+      <el-table-column prop="updateTime" label="修改时间" width="200" />
       <el-table-column label="操作" width="200" align="center">
         <template slot-scope="scope">
-          <el-button type="primary" icon="el-icon-edit" size="mini" @click="edit(scope.row.id)" title="修改"/>
-          <el-button type="danger" icon="el-icon-delete" size="mini" @click="removeDataById(scope.row.id)" title="删除"/>
-
+          <el-button
+            type="primary"
+            icon="el-icon-edit"
+            size="mini"
+            @click="edit(scope.row.id)"
+            title="修改"
+          />
+          <el-button
+            type="danger"
+            icon="el-icon-delete"
+            size="mini"
+            @click="removeDataById(scope.row.id)"
+            title="删除"
+          />
         </template>
       </el-table-column>
     </el-table>
 
-      <!-- 分页组件 -->
-  <el-pagination
-    :current-page="page"
-    :total="total"
-    :page-size="limit"
-    style="padding: 30px 0; text-align: center;"
-    layout="total, prev, pager, next, jumper"
-    @current-change="fetchPageList"
-  />
-
-
-    </div>
+    <!-- 分页组件 -->
+    <el-pagination
+      :current-page="page"
+      :total="total"
+      :page-size="limit"
+      style="padding: 30px 0; text-align: center"
+      layout="total, sizes, prev,pager, next, jumper"
+      @current-change="fetchPageList"
+      :page-sizes="[5, 10, 20]"
+      @size-change="handleSizeChange"
+    />
+  </div>
 </template>
 
 <script>
-
-// 导入 
-import api from '@/api/category/category.js'
+// 导入
+import api from "@/api/category/category.js";
 
 export default {
-   data(){
-    return{
-        list:[],
-        page:1,
-        limit:5,
-        tota:0,
-        searchObj:{},
-        listLoading:true,
-        dialogVisible:false,
-        sysCategory:{}
-    }
-   },
-   created () {
+  data() {
+    return {
+      list: [],
+      page: 1,
+      limit: 5,
+      tota: 0,
+      searchObj: {},
+      listLoading: true,
+      dialogVisible: false,
+      dialogLoading: false,
+      sysCategory: {},
+      rules: {
+        name: [{ required: true, message: "请输入分类名称", trigger: "blur" }],
+      },
+    };
+  },
+  created() {
     //this.listLoading=true;
-     this.fetchPageList();
-   },
-   methods:{
-    edit(id){
-      //1.弹框
-      this.dialogVisible=true;
-      //2.赋值
-      api.findCategoryById(id)
-      .then(response=>{
-        this.sysCategory = response.data;
-      })
+    this.fetchPageList();
+  },
+  methods: {
+    // 处理每页显示条数变化
+    handleSizeChange(val) {
+      this.limit = val; // 更新每页显示条数
+      this.fetchPageList(1); // 重置页码为1并重新获取数据
     },
-    saveOrUpdate(){
-       if(this.sysCategory.id!=null)
-       {
-         this.updateCategory();
-       }
-       else
-       {
-        this.addCategory();
-       }
-    },
-    addCategory(){
-       api
-       .addCategory(this.sysCategory)
-       .then(response=>{
-             this.$message({
-                type: 'success',
-                message: '添加成功!'
-              });
-           //关闭弹框
-           this.dialogVisible=false;
-           // 刷新列表
-           this.fetchPageList();   
+    edit(id) {
+      // 1. 立即显示弹窗
+      this.dialogVisible = true;
 
-       })
-    },
-    updateCategory(){
-       api
-       .updateCategory(this.sysCategory)
-       .then(response=>{
-             this.$message({
-                type: 'success',
-                message: '修改成功!'
-              });
-           //关闭弹框
-           this.dialogVisible=false;
-           // 刷新列表
-           this.fetchPageList();   
+      // 2. 开启加载动画，并清空旧数据防止“闪烁”
+      this.dialogLoading = true;
+      this.sysCategory = {};
 
-       })
-    },
-    add(){
-      this.dialogVisible=true;
-      this.sysCategory={};
-    },
-    removeDataById(id){
-      this.$confirm('此操作将永久删除该文件, 是否继续?', '提示', {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning'
-        }).then(() => {
-          api.removeCategoryById(id).then(response=>{
-              this.$message({
-                type: 'success',
-                message: '删除成功!'
-              });
-              this.fetchPageList();
-          })
+      // 3. 发送请求
+      api
+        .findCategoryById(id)
+        .then((response) => {
+          // 4. 数据返回，赋值
+          this.sysCategory = response.data;
 
+          // 5. 关闭加载动画
+          this.dialogLoading = false;
+
+          // 6. 确保DOM更新后，清除可能产生的验证红字
+          this.$nextTick(() => {
+            if (this.$refs.dataForm) {
+              this.$refs.dataForm.clearValidate();
+            }
+          });
         })
+        .catch((err) => {
+          // 如果请求失败，也要关闭加载动画，否则会一直转圈
+          this.dialogLoading = false;
+        });
     },
-    resetData(){
-     //1.清空搜索条件
-     this.searchObj={};
-     //2.再次刷新列表
-     this.fetchPageList();
+    saveOrUpdate() {
+      // 使用表单引用的 validate 方法
+      this.$refs.dataForm.validate((valid) => {
+        if (valid) {
+          // 校验通过，执行原有逻辑
+          if (this.sysCategory.id != null) {
+            this.updateCategory();
+          } else {
+            this.addCategory();
+          }
+        } else {
+          // 校验不通过，不执行任何操作，直接返回
+          return false;
+        }
+      });
     },
-     fetchPageList(page=1){
-        this.page=page;
-        api.getCategoryPageInfo(this.page,this.limit,this.searchObj).then(response=>{
-            this.listLoading=false;
-            // console.log(response);
-            this.list = response.data.records;
-            this.total = response.data.total;
-        })
-     }
-   }
-}
+    addCategory() {
+      api.addCategory(this.sysCategory).then((response) => {
+        this.$message({
+          type: "success",
+          message: "添加成功!",
+        });
+        //关闭弹框
+        this.dialogVisible = false;
+        // 刷新列表
+        this.fetchPageList();
+      });
+    },
+    updateCategory() {
+      api.updateCategory(this.sysCategory).then((response) => {
+        this.$message({
+          type: "success",
+          message: "修改成功!",
+        });
+        //关闭弹框
+        this.dialogVisible = false;
+        // 刷新列表
+        this.fetchPageList();
+      });
+    },
+    add() {
+      this.dialogVisible = true;
+      this.sysCategory = {};
+
+      // 等待 DOM 更新后清除验证提示
+      this.$nextTick(() => {
+        if (this.$refs.dataForm) {
+          this.$refs.dataForm.clearValidate();
+        }
+      });
+    },
+    removeDataById(id) {
+      this.$confirm("此操作将永久删除该文件, 是否继续?", "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      }).then(() => {
+        api.removeCategoryById(id).then((response) => {
+          this.$message({
+            type: "success",
+            message: "删除成功!",
+          });
+          this.fetchPageList();
+        });
+      });
+    },
+    resetData() {
+      //1.清空搜索条件
+      this.searchObj = {};
+      //2.再次刷新列表
+      this.fetchPageList();
+    },
+    fetchPageList(page = 1) {
+      this.page = page;
+      api
+        .getCategoryPageInfo(this.page, this.limit, this.searchObj)
+        .then((response) => {
+          this.listLoading = false;
+          // console.log(response);
+          this.list = response.data.records;
+          this.total = response.data.total;
+        });
+    },
+  },
+};
 </script>
 
 <style lang="less" scoped>
-
 </style>
