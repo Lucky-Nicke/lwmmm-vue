@@ -84,6 +84,16 @@
       </el-table-column>
     </el-table>
 
+    <!-- 分配权限窗口 -->
+    <el-dialog title="分配权限" :visible.sync="assignAuthVisible" width="600px">
+      <assign-auth-dialog
+        v-if="assignAuthVisible"
+        :role-id="currentRole.id"
+        :role-name="currentRole.roleName"
+        @success="handleSuccess"
+      />
+    </el-dialog>
+
     <!-- 分页插件 -->
     <el-pagination
       :current-page="page"
@@ -136,8 +146,12 @@
 
 <script>
 import api from "@/api/role/role.js";
+import AssignAuthDialog from "@/views/system/sysRole/AssignAuthDialog.vue";
 
 export default {
+  components: {
+    AssignAuthDialog,
+  },
   data() {
     return {
       list: [],
@@ -158,6 +172,8 @@ export default {
           { required: true, message: "请输入角色编码", trigger: "blur" },
         ],
       },
+      assignAuthVisible: false,
+      currentRole: {},
     };
   },
   created() {
@@ -324,9 +340,14 @@ export default {
       });
     },
     showAssignAuth(row) {
-      this.$router.push(
-        "/system/assignAuth?id=" + row.id + "&roleName=" + row.roleName
-      );
+      this.sysRole = {};
+      this.currentRole = row;
+      this.assignAuthVisible = true;
+    },
+
+    handleSuccess() {
+      this.assignAuthVisible = false;
+      this.fetchData(1);
     },
   },
 };

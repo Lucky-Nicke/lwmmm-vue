@@ -54,17 +54,16 @@
         :data="tableData"
         border
         style="width: 100%"
-        :row-style="{ height: '80px' }"
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" align="center" width="80">
         </el-table-column>
-        <el-table-column label="序号" width="120" align="center" fixed>
+        <el-table-column label="序号" width="50" align="center" fixed>
           <template slot-scope="scope">
             {{ (pageNum - 1) * limit + scope.$index + 1 }}
           </template>
         </el-table-column>
-        <el-table-column prop="title" label="标题" width="120" align="center">
+        <el-table-column prop="title" label="标题" width="200" align="center">
         </el-table-column>
         <el-table-column
           prop="businessType"
@@ -74,12 +73,11 @@
         >
           <template slot-scope="scope">
             <span v-if="scope.row.businessType === 'OTHER'">其他</span>
+            <span v-if="scope.row.businessType === 'QUERY'">查询</span>
             <span v-if="scope.row.businessType === 'INSERT'">新增</span>
             <span v-if="scope.row.businessType === 'UPDATE'">修改</span>
             <span v-if="scope.row.businessType === 'DELETE'">删除</span>
           </template>
-        </el-table-column>
-        <el-table-column prop="method" label="方法名称" width="200">
         </el-table-column>
         <el-table-column
           prop="requestMethod"
@@ -89,65 +87,16 @@
         >
         </el-table-column>
         <el-table-column
-          prop="operatorType"
-          label="操作类别"
-          width="120"
-          align="center"
-        >
-          <template slot-scope="scope">
-            <span v-if="scope.row.operatorType === 'OTHER'">其他</span>
-            <span v-if="scope.row.operatorType === 'MANAGE'">后台用户</span>
-            <span v-if="scope.row.operatorType === 'MOBILE'">手机端用户</span>
-          </template>
-        </el-table-column>
-        <el-table-column
           prop="operName"
           label="操作人员"
           width="150"
           align="center"
         >
         </el-table-column>
-        <el-table-column
-          prop="deptName"
-          label="部门名称"
-          width="150"
-          align="center"
-        >
+        <el-table-column prop="operUrl" label="请求URL" width="280">
         </el-table-column>
-        <el-table-column prop="operUrl" label="请求URL" width="200">
+        <el-table-column prop="operIp" label="主机地址" width="120">
         </el-table-column>
-        <el-table-column prop="operIp" label="主机地址" width="200">
-        </el-table-column>
-        <!-- <el-table-column
-                    prop="operParam"
-                    label="请求参数"
-                    width="200"
-                >
-                </el-table-column> -->
-        <!-- <el-table-column
-                    prop="jsonResult"
-                    label="返回参数"
-                    width="200"
-                >
-                </el-table-column> -->
-        <el-table-column prop="status" label="状态" width="150" align="center">
-          <template slot-scope="scope">
-            <span
-              v-if="scope.row.status === 0 || scope.row.status === 'SUCCESS'"
-              >正常</span
-            >
-            <span v-if="scope.row.status === 1 || scope.row.status === 'FAIL'"
-              >异常</span
-            >
-          </template>
-        </el-table-column>
-        <!-- <el-table-column
-                    prop="operTime"
-                    label="操作时间"
-                    width="200"
-                    align="center"
-                >
-                </el-table-column> -->
         <el-table-column
           prop="createTime"
           label="创建时间"
@@ -155,7 +104,7 @@
           align="center"
         >
         </el-table-column>
-        <el-table-column label="操作" width="120" align="center" fixed="right">
+        <el-table-column label="操作" align="center" fixed="right">
           <template slot-scope="scope">
             <el-button
               type="danger"
@@ -175,8 +124,10 @@
       :current-page="pageNum"
       style="padding: 30px 0; text-align: center"
       :page-size="limit"
-      layout="total, prev, pager, next, jumper"
+      layout="total, sizes, prev,pager, next, jumper"
+      :page-sizes="[5, 10, 20]"
       :total="total"
+      @size-change="handleSizeChange"
     >
     </el-pagination>
   </div>
@@ -191,12 +142,13 @@ export default {
     return {
       loading: true,
       pageNum: 1,
-      limit: 4,
+      limit: 5,
       total: 0,
       searchObj: {}, //搜索条件
       createTimes: [], //时间【模糊查询条件】
       sysOperLog: {},
       selectValueIds: [],
+      tableData: [],
     };
   },
   created() {
@@ -204,6 +156,11 @@ export default {
     this.load(1);
   },
   methods: {
+    // 处理每页显示条数变化
+    handleSizeChange(val) {
+      this.limit = val; // 更新每页显示条数
+      this.load(1); // 重置页码为1并重新获取数据
+    },
     //加载数据
     load(pageNum) {
       this.pageNum = pageNum;

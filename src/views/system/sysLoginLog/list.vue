@@ -126,8 +126,10 @@
       :current-page="pageNum"
       style="padding: 30px 0; text-align: center"
       :page-size="limit"
-      layout="total, prev, pager, next, jumper"
+      layout="total, sizes, prev,pager, next, jumper"
+      :page-sizes="[5, 10, 20]"
       :total="total"
+      @size-change="handleSizeChange"
     >
     </el-pagination>
   </div>
@@ -143,12 +145,13 @@ export default {
       tableData: [],
       loading: true,
       pageNum: 1,
-      limit: 4,
+      limit: 5,
       total: 0,
       searchObj: {}, //搜索条件
       createTimes: [], //时间【模糊查询条件】
       sysLoginLog: {},
       selectValueIds: [],
+      tableData: [],
     };
   },
   created() {
@@ -156,6 +159,11 @@ export default {
     this.load(1);
   },
   methods: {
+    // 处理每页显示条数变化
+    handleSizeChange(val) {
+      this.limit = val; // 更新每页显示条数
+      this.load(1); // 重置页码为1并重新获取数据
+    },
     //加载数据
     load(pageNum) {
       this.pageNum = pageNum;
