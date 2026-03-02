@@ -58,7 +58,7 @@
               v-for="item in categoryList"
               :key="item.id"
               :label="item.name"
-              :value="item.id"
+              :value="item.name"
             ></el-option>
           </el-select>
         </el-form-item>
@@ -192,6 +192,20 @@
       @current-change="fetchPageList"
       @size-change="handleSizeChange"
     />
+
+    <el-dialog
+      title="播放视频"
+      :visible.sync="dialogVideoVisible"
+      width="60%"
+      top="5vh"
+      :destroy-on-close="true"
+      append-to-body
+    >
+      <div id="J_prismPlayer" style="width: 100%; height: 500px"></div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="closeDialog">关 闭</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -225,7 +239,7 @@ export default {
       list: [],
       page: 1,
       limit: 5,
-      total: 0, // 修正了 typo: tota -> total
+      total: 0,
       searchObj: {},
       listLoading: false,
       dialogVisible: false,
@@ -236,6 +250,9 @@ export default {
       VideodialogVisible: false,
       movieRules, // 将规则对象添加到 data 中
       editRules, // 保存引用
+
+      dialogVideoVisible: false, // 控制弹窗显示
+      currentPlayer: null, // 存储当前播放器实例
     };
   },
   mounted() {},
@@ -249,15 +266,9 @@ export default {
       this.limit = val; // 更新每页显示条数
       this.fetchPageList(1); // 重置页码为1并重新获取数据
     },
-    cidformatter(row, cloumn) {
-      if (row.cid == 2) {
-        return "电影";
-      } else if (row.cid == 1) {
-        return "电视剧";
-      }
-    },
-    showPlayPage(row) {
-      this.$router.push("/system/assignVideo?id=" + row.id);
+    cidformatter(row, column) {
+      // 直接返回数字ID
+      return row.cid;
     },
     findAll() {
       categoryapi.findAll().then((response) => {
@@ -421,6 +432,77 @@ export default {
           this.total = response.data.total;
         });
     },
+    showPlayPage(row) {
+      // 这里可以根据row的某个属性来判断是否有视频可播
+      // 假设row中有playId等信息，或者先打开弹窗再根据ID请求
+      // 为了演示，我们直接打开弹窗，并传入row数据
+      this.dialogVideoVisible = true;
+      // 确保DOM更新后再初始化播放器
+      this.$nextTick(() => {
+        this.initPlayer(row.id);
+      });
+    },
+
+    initPlayer(movieId) {
+      // 销毁旧的播放器实例（如果存在）
+      if (this.currentPlayer) {
+        this.currentPlayer.dispose();
+        this.currentPlayer = null;
+      }
+
+      // 调用API获取播放凭证
+      import("@/api/movie/movie.js").then((apiModule) => {
+        const api = apiModule.default;
+        api
+          .getPlayAuthById(movieId)
+          .then((response) => {
+            console.log(response);
+            const playInfo = response.data;
+
+            // 初始化阿里云播放器
+            this.currentPlayer = new window.Aliplayer(
+              {
+                id: "J_prismPlayer",
+                width: "100%",
+                height: "500px",
+                autoplay: false,
+                controlBarVisibility: "hover",
+                isLive: false,
+                cover: playInfo.image,
+                vid: playInfo.playId,
+                playauth: playInfo.playAuth,
+                encryptType: 1,
+                license: {
+                  domain: "lucky-nicke-movie.oss-cn-shenzhen.aliyuncs.com",
+                  key: "xPfu7NfoGscF2Fycvf1255184446947d1afdf46e27fef31bc",
+                },
+              },
+              (player) => {
+                console.log("播放器创建好了。");
+              }
+            );
+          })
+          .catch((err) => {
+            console.error("获取播放信息失败:", err);
+            this.$message.error("获取视频播放信息失败！");
+          });
+      });
+    },
+
+    closeDialog() {
+      this.dialogVideoVisible = false;
+      // 关闭弹窗时销毁播放器，释放资源
+      if (this.currentPlayer) {
+        this.currentPlayer.dispose();
+        this.currentPlayer = null;
+      }
+    },
+  },
+  beforeDestroy() {
+    // 组件销毁前，确保播放器也被销毁
+    if (this.currentPlayer) {
+      this.currentPlayer.dispose();
+    }
   },
 };
 </script>
