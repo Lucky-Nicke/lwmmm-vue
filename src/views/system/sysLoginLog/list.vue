@@ -55,7 +55,6 @@
         :data="tableData"
         border
         style="width: 100%"
-        :row-style="{ height: '80px' }"
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" align="center" width="80">

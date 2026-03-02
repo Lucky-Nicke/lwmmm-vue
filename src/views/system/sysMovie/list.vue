@@ -36,20 +36,24 @@
       >
     </div>
 
+    <!-- 在 el-dialog 内部的 el-form 上添加 rules 属性 -->
     <el-dialog title="添加/修改" :visible.sync="dialogVisible" width="40%">
       <el-form
         ref="dataForm"
         :model="sysMovie"
+        :rules="movieRules"
         label-width="150px"
         size="small"
         style="padding-right: 40px"
       >
-        <el-form-item label="影视名称">
+        <el-form-item label="影视名称" prop="name">
+          <!-- 为需要校验的字段添加 prop -->
           <el-input v-model="sysMovie.name" />
         </el-form-item>
 
         <el-form-item label="所属栏目" prop="cid">
-          <el-select v-model="sysMovie.cid" placeholder="请输入影视分类">
+          <!-- 为需要校验的字段添加 prop -->
+          <el-select v-model="sysMovie.cid" placeholder="请选择影视分类">
             <el-option
               v-for="item in categoryList"
               :key="item.id"
@@ -85,7 +89,8 @@
           </el-upload>
         </el-form-item>
 
-        <el-form-item label="影视文件" prop="video">
+        <el-form-item label="影视文件" prop="playId">
+          <!-- 注意：后端接收的字段是 playId -->
           <el-upload
             class="upload-demo"
             name="uploadVideo"
@@ -111,10 +116,11 @@
           icon="el-icon-refresh-right"
           >取 消</el-button
         >
+        <!-- 将确定按钮的点击事件改为 handleSave -->
         <el-button
           type="primary"
           icon="el-icon-check"
-          @click="saveOrUpdate()"
+          @click="handleSave"
           size="small"
           >确 定</el-button
         >
@@ -139,19 +145,10 @@
       <el-table-column prop="cid" label="影视类型" :formatter="cidformatter" />
       <el-table-column prop="director" label="导演" width="160" />
 
-      <!-- <el-table-column prop="image" label="剧照">
-        <template slot-scope="scope">
-          {{scope.row.image}}
-          <viewer>
-            <img :src="scope.row.image" alt="" style="height: 80px" />
-          </viewer>
-        </template>
-      </el-table-column> -->
-
       <el-table-column prop="image" label="剧照">
         <template slot-scope="scope">
           <viewer v-if="scope.row.image" :images="scope.row.image">
-            <img alt="头像" :src="scope.row.image" style="height: 80px" />
+            <img alt="剧照" :src="scope.row.image" style="height: 80px" />
           </viewer>
           <span v-else style="color: #999; font-size: 12px">暂无图片</span>
         </template>
@@ -188,10 +185,12 @@
     <el-pagination
       :current-page="page"
       :total="total"
+      :page-sizes="[5, 10, 20]"
       :page-size="limit"
       style="padding: 30px 0; text-align: center"
-      layout="total, prev, pager, next, jumper"
+      layout="total, sizes, prev,pager, next, jumper"
       @current-change="fetchPageList"
+      @size-change="handleSizeChange"
     />
   </div>
 </template>
@@ -205,29 +204,51 @@ import categoryapi from "@/api/category/category.js";
 
 export default {
   data() {
+    // 定义校验规则
+    const movieRules = {
+      name: [{ required: true, message: "请输入影视名称", trigger: "blur" }],
+      cid: [{ required: true, message: "请选择所属栏目", trigger: "change" }],
+      image: [{ required: true, message: "请上传影视图片", trigger: "change" }],
+      playId: [
+        { required: true, message: "请上传影视文件", trigger: "change" },
+      ],
+    };
+
+    const editRules = {
+      name: [{ required: true, message: "请输入影视名称", trigger: "blur" }],
+      cid: [{ required: true, message: "请选择所属栏目", trigger: "change" }],
+      image: [], // 编辑时不需要必填
+      playId: [], // 编辑时不需要必填
+    };
+
     return {
       list: [],
       page: 1,
       limit: 5,
-      tota: 0,
+      total: 0, // 修正了 typo: tota -> total
       searchObj: {},
       listLoading: false,
       dialogVisible: false,
       sysMovie: {},
-      // 影视分类列表
       categoryList: [],
       fileurl: "",
       loading: false,
       VideodialogVisible: false,
+      movieRules, // 将规则对象添加到 data 中
+      editRules, // 保存引用
     };
   },
   mounted() {},
   created() {
-    //this.listLoading=true;
     this.fetchPageList();
     this.findAll();
   },
   methods: {
+    // 处理每页显示条数变化
+    handleSizeChange(val) {
+      this.limit = val; // 更新每页显示条数
+      this.fetchPageList(1); // 重置页码为1并重新获取数据
+    },
     cidformatter(row, cloumn) {
       if (row.cid == 2) {
         return "电影";
@@ -244,24 +265,27 @@ export default {
       });
     },
     edit(id) {
-      //1.弹框
+      // 切换到编辑模式的规则
+      this.movieRules = this.editRules;
       this.dialogVisible = true;
-      //2.赋值
       api.getMovieById(id).then((response) => {
         this.sysMovie = response.data;
+        // 清除校验提示，防止旧的必填提示残留
+        this.$nextTick(() => {
+          this.$refs.dataForm?.clearValidate();
+        });
       });
     },
-    //文件开始上传,开始屏幕遮罩
     handleBeforeUpload() {
       this.loading = true;
     },
-    //图片上传成功的钩子函数
     handleImageSuccess(res, file) {
-      console.log(res); // 得到的是图片地址
+      console.log(res);
 
       this.loading = false;
-      if (file.response != "") {
-        this.sysMovie.image = file.response;
+      if (res) {
+        // 校验 res 是否存在
+        this.sysMovie.image = res.data; // 直接使用 res，而不是 file.response
 
         this.$message({
           type: "info",
@@ -278,9 +302,10 @@ export default {
     },
     handleVideoSuccess(res, file) {
       this.loading = false;
-      if (file.response != "") {
-        console.log(file); // 得到是一个对象
-        this.sysMovie.playId = file.response;
+      if (res) {
+        // 校验 res 是否存在
+        console.log(file);
+        this.sysMovie.playId = res; // 直接使用 res
         this.$message({
           type: "info",
           message: "视频上传成功",
@@ -294,7 +319,23 @@ export default {
         });
       }
     },
-
+    // 新增一个方法，在提交前进行校验
+    handleSave() {
+      this.$refs.dataForm.validate((valid) => {
+        if (valid) {
+          // 如果校验通过，则执行保存或更新操作
+          this.saveOrUpdate();
+        } else {
+          // 如果校验不通过，给出提示（Element UI 会自动高亮显示错误项）
+          console.log("表单校验失败!");
+          this.$message({
+            type: "error",
+            message: "请按要求填写表单！",
+          });
+          return false;
+        }
+      });
+    },
     saveOrUpdate() {
       if (this.sysMovie.id != null) {
         this.updateMovie();
@@ -303,32 +344,54 @@ export default {
       }
     },
     addMovie() {
-      api.addMovie(this.sysMovie).then((response) => {
-        this.$message({
-          type: "success",
-          message: "添加成功!",
+      api
+        .addMovie(this.sysMovie)
+        .then((response) => {
+          this.$message({
+            type: "success",
+            message: "添加成功!",
+          });
+          this.dialogVisible = false;
+          this.fetchPageList();
+        })
+        .catch((error) => {
+          console.error("添加失败:", error);
+          this.$message({
+            type: "error",
+            message: "添加失败!",
+          });
         });
-        //关闭弹框
-        this.dialogVisible = false;
-        // 刷新列表
-        this.fetchPageList();
-      });
     },
     updateMovie() {
-      api.updateMovie(this.sysMovie).then((response) => {
-        this.$message({
-          type: "success",
-          message: "修改成功!",
+      api
+        .updateMovie(this.sysMovie)
+        .then((response) => {
+          this.$message({
+            type: "success",
+            message: "修改成功!",
+          });
+          this.dialogVisible = false;
+          this.fetchPageList();
+        })
+        .catch((error) => {
+          console.error("修改失败:", error);
+          this.$message({
+            type: "error",
+            message: "修改失败!",
+          });
         });
-        //关闭弹框
-        this.dialogVisible = false;
-        // 刷新列表
-        this.fetchPageList();
-      });
     },
     add() {
+      this.movieRules = this.movieRules;
+
       this.sysMovie = {};
       this.dialogVisible = true;
+      // 清除上一次的校验结果
+      this.$nextTick(() => {
+        if (this.$refs.dataForm) {
+          this.$refs.dataForm.clearValidate();
+        }
+      });
     },
     removeDataById(id) {
       this.$confirm("此操作将永久删除该影视, 是否继续?", "提示", {
@@ -346,9 +409,7 @@ export default {
       });
     },
     resetData() {
-      //1.清空搜索条件
       this.searchObj = {};
-      //2.再次刷新列表
       this.fetchPageList();
     },
     fetchPageList(page = 1) {
@@ -356,8 +417,6 @@ export default {
       api
         .getMoviePageInfo(this.page, this.limit, this.searchObj)
         .then((response) => {
-          // this.listLoading=false;
-          // console.log(response);
           this.list = response.data.records;
           this.total = response.data.total;
         });

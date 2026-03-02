@@ -219,7 +219,8 @@ export default {
     //重置
     resetData() {
       // 清空表单
-      this.searchObj = "";
+      this.searchObj = {}; // 修改这里，将空字符串改为一个空对象
+      this.createTimes = []; // 同时清空时间选择器
       // 再次刷新列表数据
       this.load(1);
     },
