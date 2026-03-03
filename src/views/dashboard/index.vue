@@ -14,10 +14,11 @@
           </div>
           <div class="card-panel-description">
             <div class="card-panel-text">总用户数</div>
+            <span v-if="loadingTotalUserCount">--</span>
             <count-to
               :start-val="0"
-              :end-val="102400"
-              :duration="2600"
+              :end-val="totalUserCount"
+              :duration="5000"
               class="card-panel-num"
             />
           </div>
@@ -122,7 +123,7 @@
       <el-col :xs="24" :sm="24" :lg="12">
         <el-card class="box-card tech-card">
           <div slot="header" class="clearfix">
-            <span class="tech-header-text">💬 舆情/弹幕实时流</span>
+            <span class="tech-header-text">💬 弹幕实时流</span>
           </div>
           <div class="comment-list">
             <div
@@ -154,26 +155,22 @@
 import { mapGetters } from "vuex";
 import * as echarts from "echarts";
 import CountTo from "vue-count-to";
-
+import date from "@/api/date/date.js";
 // 模拟4种不同类型的图表数据
 const lineChartData = {
   users: {
-    expectedData: [100, 120, 161, 134, 105, 160, 165],
     actualData: [120, 82, 91, 154, 162, 140, 145],
-    title: "用户增长趋势 (New Users)",
+    title: "用户人数趋势 (User Trend)",
   },
   movies: {
-    expectedData: [200, 192, 120, 144, 160, 130, 140],
     actualData: [180, 160, 151, 106, 145, 150, 130],
-    title: "影视入库趋势 (Movie Stock)",
+    title: "影视数量趋势 (Movie Stock)",
   },
   plays: {
-    expectedData: [80, 100, 121, 104, 105, 90, 100],
     actualData: [120, 90, 100, 138, 142, 130, 130],
     title: "实时播放趋势 (Real-time Plays)",
   },
   danmaku: {
-    expectedData: [130, 140, 141, 142, 145, 150, 160],
     actualData: [120, 82, 91, 154, 162, 140, 130],
     title: "弹幕互动趋势 (Danmaku Activity)",
   },
@@ -188,9 +185,10 @@ export default {
     return {
       chart: null,
       currentTime: "",
+      loadingTotalUserCount: true,
       timer: null,
       // 默认显示 'users' 的数据
-      currentChartData: lineChartData.users,
+      // currentChartData: lineChartData.users,
       hotMovies: [
         { name: "流浪地球2", category: "科幻", views: "98,201" },
         { name: "狂飙", category: "剧情", views: "87,110" },
@@ -203,7 +201,7 @@ export default {
           user: "Admin",
           color: "#409EFF",
           time: "刚刚",
-          movie: "流浪地球2",
+          movie: "123流浪地球2",
           content: "特效炸裂，强烈推荐！",
         },
         {
@@ -234,7 +232,7 @@ export default {
     ...mapGetters(["name"]),
   },
   mounted() {
-    this.initChart();
+    this.loadInitialChartData();
     this.startClock();
     window.addEventListener("resize", this.resizeChart);
   },
@@ -244,6 +242,31 @@ export default {
     if (this.timer) clearInterval(this.timer);
   },
   methods: {
+    async loadInitialChartData() {
+      try {
+        this.loadingTotalUserCount = true;
+
+        // 1. 先获取初始数据
+        const response = await date.getUserTrendData();
+        const initialData = response.data.actualData;
+        const initialTotalCount = response.data.totalUserCount;
+
+        // 设置初始总用户数
+        this.totalUserCount = initialTotalCount;
+
+        // 2. 然后再初始化图表，使用真实数据
+        this.initChart(initialData);
+      } catch (error) {
+        console.error("获取初始用户趋势数据失败:", error);
+        // 如果请求失败，可以初始化一个空图表或显示错误信息
+        this.initChart([]); // 传入空数组初始化一个空图
+        this.$message.error("获取用户数据失败");
+      } finally {
+        // 请求结束后，无论成功与否，都取消加载状态
+        this.loadingTotalUserCount = false;
+      }
+    },
+
     startClock() {
       this.timer = setInterval(() => {
         const date = new Date();
@@ -254,23 +277,60 @@ export default {
       if (this.chart) this.chart.resize();
     },
     // 核心交互逻辑：接收类型，切换数据
-    handleSetLineChartData(type) {
-      this.currentChartData = lineChartData[type];
-      // 更新图表数据，而不是重新初始化
-      this.chart.setOption({
-        title: { text: this.currentChartData.title }, // 更新标题
-        series: [
-          { data: this.currentChartData.expectedData },
-          { data: this.currentChartData.actualData },
-        ],
-      });
+    async handleSetLineChartData(type) {
+      // 如果点击的是 'users'，则发起网络请求获取真实数据
+      if (type === "users") {
+        try {
+          // 请求真实数据
+          const response = await date.getUserTrendData();
+          const realData = response.data.actualData; // 假设 response 结构为 { code: 200, data: [...] }
+
+          if (response.code === 200) {
+            const realData = response.data.actualData;
+            const realTotalCount = response.data.totalUserCount;
+
+            // 1. 更新总用户数
+            this.totalUserCount = realTotalCount;
+
+            // 2. 更新图表数据
+            this.chart.setOption({
+              title: {
+                text: lineChartData.users.title,
+              },
+              series: [{ data: realData }],
+            });
+          } else {
+            console.error("获取用户趋势数据失败:", response.message);
+          }
+        } catch (error) {
+          console.error("获取用户趋势数据失败:", error);
+          // 此处可以添加用户友好的错误提示
+          this.$message.error("获取用户数据失败");
+        }
+      } else {
+        // 其他类型（movies, plays, danmaku）仍使用模拟数据
+        this.currentChartData = lineChartData[type];
+        this.chart.setOption({
+          title: {
+            text: this.currentChartData.title,
+          },
+          series: [{ data: this.currentChartData.actualData }],
+        });
+      }
     },
-    initChart() {
+    initChart(chartDataArray) {
       this.chart = echarts.init(document.getElementById("mainChart"));
-      this.setChartOption(this.currentChartData);
+      // 将数据传给 setChartOption
+      this.setChartOption({
+        ...lineChartData.users,
+        actualData: chartDataArray,
+      });
     },
     // 将配置项提取出来，方便初始化
     setChartOption(chartData) {
+      // 生成最新的日期标签
+      const dateLabels = generateLastSevenDaysLabels();
+
       const option = {
         backgroundColor: "transparent",
         title: {
@@ -306,7 +366,7 @@ export default {
           {
             type: "category",
             boundaryGap: false,
-            data: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
+            data: dateLabels,
             axisLine: { lineStyle: { color: "#00f2fe" } },
             axisLabel: { color: "#8eb8ff" },
           },
@@ -345,6 +405,18 @@ export default {
     },
   },
 };
+
+function generateLastSevenDaysLabels() {
+  const labels = [];
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    labels.push(`${month}-${day}`);
+  }
+  return labels;
+}
 </script>
 
 <style lang="scss" scoped>
