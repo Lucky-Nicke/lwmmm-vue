@@ -63,16 +63,8 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item label="关键字" prop="keyword">
-          <el-input v-model="sysMovie.keyword"></el-input>
-        </el-form-item>
-
-        <el-form-item label="导演" prop="director">
+        <el-form-item label="作者" prop="director">
           <el-input v-model="sysMovie.director"></el-input>
-        </el-form-item>
-
-        <el-form-item label="演员" prop="actor">
-          <el-input v-model="sysMovie.actor"></el-input>
         </el-form-item>
 
         <el-form-item label="影视图片" prop="image">
@@ -143,7 +135,7 @@
 
       <el-table-column prop="name" label="影视名称" />
       <el-table-column prop="cid" label="影视类型" :formatter="cidformatter" />
-      <el-table-column prop="director" label="导演" width="160" />
+      <el-table-column prop="director" label="作者" width="160" />
 
       <el-table-column prop="image" label="剧照">
         <template slot-scope="scope">
