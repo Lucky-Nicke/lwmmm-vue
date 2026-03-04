@@ -38,8 +38,8 @@
             <div class="card-panel-text">影视库存</div>
             <count-to
               :start-val="0"
-              :end-val="8121"
-              :duration="3000"
+              :end-val="totalMovieCount"
+              :duration="5000"
               class="card-panel-num"
             />
           </div>
@@ -57,8 +57,8 @@
             <div class="card-panel-text">今日播放</div>
             <count-to
               :start-val="0"
-              :end-val="9280"
-              :duration="3200"
+              :end-val="totalPlayCount"
+              :duration="5000"
               class="card-panel-num"
             />
           </div>
@@ -76,8 +76,8 @@
             <div class="card-panel-text">总弹幕数</div>
             <count-to
               :start-val="0"
-              :end-val="13600"
-              :duration="3600"
+              :end-val="totalDanmakuCount"
+              :duration="5000"
               class="card-panel-num"
             />
           </div>
@@ -155,23 +155,25 @@
 import { mapGetters } from "vuex";
 import * as echarts from "echarts";
 import CountTo from "vue-count-to";
-import date from "@/api/date/date.js";
+import {
+  getUserTrendData,
+  getMovieStockData,
+  getMoviePlaysData,
+  getMovieDanmakuData,
+} from "@/api/date/date.js";
+
 // 模拟4种不同类型的图表数据
 const lineChartData = {
   users: {
-    actualData: [120, 82, 91, 154, 162, 140, 145],
     title: "用户人数趋势 (User Trend)",
   },
   movies: {
-    actualData: [180, 160, 151, 106, 145, 150, 130],
     title: "影视数量趋势 (Movie Stock)",
   },
   plays: {
-    actualData: [120, 90, 100, 138, 142, 130, 130],
     title: "实时播放趋势 (Real-time Plays)",
   },
   danmaku: {
-    actualData: [120, 82, 91, 154, 162, 140, 130],
     title: "弹幕互动趋势 (Danmaku Activity)",
   },
 };
@@ -187,6 +189,10 @@ export default {
       currentTime: "",
       loadingTotalUserCount: true,
       timer: null,
+      totalUserCount: 0,
+      totalMovieCount: 0,
+      totalPlayCount: 0,
+      totalDanmakuCount: 0,
       // 默认显示 'users' 的数据
       // currentChartData: lineChartData.users,
       hotMovies: [
@@ -232,6 +238,7 @@ export default {
     ...mapGetters(["name"]),
   },
   mounted() {
+    this.loadAllInitialCounts();
     this.loadInitialChartData();
     this.startClock();
     window.addEventListener("resize", this.resizeChart);
@@ -244,26 +251,20 @@ export default {
   methods: {
     async loadInitialChartData() {
       try {
-        this.loadingTotalUserCount = true;
+        // 初始化时加载用户数据作为默认图表
+        const response = await getUserTrendData();
 
-        // 1. 先获取初始数据
-        const response = await date.getUserTrendData();
-        const initialData = response.data.actualData;
-        const initialTotalCount = response.data.totalUserCount;
-
-        // 设置初始总用户数
-        this.totalUserCount = initialTotalCount;
-
-        // 2. 然后再初始化图表，使用真实数据
-        this.initChart(initialData);
+        if (response.code === 200) {
+          const initialData = response.data.actualData;
+          this.initChart(initialData); // 初始化图表
+        } else {
+          this.$message.error("获取默认图表数据失败");
+          this.initChart([]); // 初始化空图表
+        }
       } catch (error) {
-        console.error("获取初始用户趋势数据失败:", error);
-        // 如果请求失败，可以初始化一个空图表或显示错误信息
-        this.initChart([]); // 传入空数组初始化一个空图
-        this.$message.error("获取用户数据失败");
-      } finally {
-        // 请求结束后，无论成功与否，都取消加载状态
-        this.loadingTotalUserCount = false;
+        console.error("获取默认图表数据失败:", error);
+        this.initChart([]);
+        this.$message.error("网络错误，无法获取默认图表数据");
       }
     },
 
@@ -276,48 +277,95 @@ export default {
     resizeChart() {
       if (this.chart) this.chart.resize();
     },
+
+    async loadAllInitialCounts() {
+      try {
+        // 使用 Promise.all 并行发起所有请求，以提高效率
+        const [userRes, movieRes, playRes, danmakuRes] = await Promise.all([
+          getUserTrendData(), // 获取用户总数
+          getMovieStockData(), // 获取电影总数
+          getMoviePlaysData(), // 获取播放总数
+          getMovieDanmakuData(), // 获取弹幕总数
+        ]);
+
+        // 检查每个请求是否成功
+        if (userRes.code === 200) {
+          // 假设后端统一返回 totalUserCount 字段
+          this.totalUserCount = userRes.data.totalUserCount;
+        }
+        if (movieRes.code === 200) {
+          this.totalMovieCount = movieRes.data.totalUserCount;
+        }
+        if (playRes.code === 200) {
+          this.totalPlayCount = playRes.data.totalUserCount;
+        }
+        if (danmakuRes.code === 200) {
+          this.totalDanmakuCount = danmakuRes.data.totalUserCount;
+        }
+
+        this.loadingTotalUserCount = false; // 可以在这里或在获取第一个（用户）数据后关闭加载状态
+      } catch (error) {
+        console.error("获取初始总数失败:", error);
+        this.$message.error("获取初始数据失败");
+        this.loadingTotalUserCount = false;
+      }
+    },
+
     // 核心交互逻辑：接收类型，切换数据
     async handleSetLineChartData(type) {
-      // 如果点击的是 'users'，则发起网络请求获取真实数据
-      if (type === "users") {
-        try {
-          // 请求真实数据
-          const response = await date.getUserTrendData();
-          const realData = response.data.actualData; // 假设 response 结构为 { code: 200, data: [...] }
+      const apiMap = {
+        users: getUserTrendData,
+        movies: getMovieStockData,
+        plays: getMoviePlaysData,
+        danmaku: getMovieDanmakuData,
+      };
 
-          if (response.code === 200) {
-            const realData = response.data.actualData;
-            const realTotalCount = response.data.totalUserCount;
+      const apiFunction = apiMap[type];
 
-            // 1. 更新总用户数
-            this.totalUserCount = realTotalCount;
+      if (!apiFunction) {
+        console.error(`未找到类型为 ${type} 的API函数`);
+        return;
+      }
 
-            // 2. 更新图表数据
+      try {
+        const response = await apiFunction();
+
+        if (response.code === 200) {
+          const realDataObj = response.data;
+          const realData = realDataObj.actualData;
+
+          // 根据请求类型，更新对应的总数（虽然总数已在初始化时获取，但点击后仍可刷新）
+          // 如果后端返回的字段名是统一的 totalUserCount，则按如下方式处理
+          const backendTotalCount = realDataObj.totalUserCount;
+
+          if (type === "users") {
+            this.totalUserCount = backendTotalCount;
+          } else if (type === "movies") {
+            this.totalMovieCount = backendTotalCount;
+          } else if (type === "plays") {
+            this.totalPlayCount = backendTotalCount;
+          } else if (type === "danmaku") {
+            this.totalDanmakuCount = backendTotalCount;
+          }
+
+          if (this.chart) {
             this.chart.setOption({
               title: {
-                text: lineChartData.users.title,
+                text: lineChartData[type].title,
               },
               series: [{ data: realData }],
             });
-          } else {
-            console.error("获取用户趋势数据失败:", response.message);
           }
-        } catch (error) {
-          console.error("获取用户趋势数据失败:", error);
-          // 此处可以添加用户友好的错误提示
-          this.$message.error("获取用户数据失败");
+        } else {
+          console.error(`获取${type}数据失败:`, response.message);
+          this.$message.error(response.message || `获取${type}数据失败`);
         }
-      } else {
-        // 其他类型（movies, plays, danmaku）仍使用模拟数据
-        this.currentChartData = lineChartData[type];
-        this.chart.setOption({
-          title: {
-            text: this.currentChartData.title,
-          },
-          series: [{ data: this.currentChartData.actualData }],
-        });
+      } catch (error) {
+        console.error(`请求${type}数据时发生网络错误:`, error);
+        this.$message.error(`网络错误，无法获取${type}数据`);
       }
     },
+
     initChart(chartDataArray) {
       this.chart = echarts.init(document.getElementById("mainChart"));
       // 将数据传给 setChartOption
