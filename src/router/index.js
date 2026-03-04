@@ -1,5 +1,7 @@
 import Vue from 'vue'
 import Router from 'vue-router'
+import VideoDetail from '@/views/system/sysMovie/VideoDetail.vue' // 请根据您实际存放 VideoDetail.vue 的路径进行修改
+
 
 Vue.use(Router)
 
@@ -61,6 +63,42 @@ export const constantRoutes = [
     }]
   },
 
+  {
+    path: '/video',
+    component: Layout,
+    hidden: true,
+    // 修正 redirect，使其指向一个有效的列表页路径
+    redirect: '/log/sysMovie',
+    name: 'VideoManagement',
+    // 移除 hidden: true，否则整个 "影视管理" 菜单都看不到了
+    // hidden: true, 
+    meta: { title: '数据管理', icon: 'el-icon-video-camera' },
+    children: [
+      // 列表页面路由
+      {
+        path: 'list',
+        name: 'VideoList',
+        component: () => import('@/views/system/sysMovie/VideoList.vue'),
+        meta: { title: '视频数据', icon: 'el-icon-menu' }
+      },
+      // --- 新增/修改：详情页面路由，与 list 同级 ---
+      {
+        // 完整路径就是 /log/sysMovie/:id
+        path: 'sysMovie/:id',
+        name: 'VideoDetail',
+        component: VideoDetail,
+        meta: {
+          title: '视频详情',
+          icon: 'el-icon-document',
+          noCache: true,
+          // 关键！当访问 /video/sysMovie/xxx 时，激活 /video/list 对应的菜单项
+          activeMenu: '/video/list'
+        },
+        hidden: true // 非常重要，确保它不出现在侧边栏
+      }
+    ]
+  },
+
   // {
   //   path: '/system',
   //   component: Layout,
@@ -101,8 +139,8 @@ export const constantRoutes = [
   //   ]
   // },
 
-//   // 404 page must be placed at the end !!!
-//   { path: '*', redirect: '/404', hidden: true }
+  //   // 404 page must be placed at the end !!!
+  //   { path: '*', redirect: '/404', hidden: true }
 ]
 
 const createRouter = () => new Router({
