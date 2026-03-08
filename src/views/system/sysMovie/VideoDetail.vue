@@ -1,5 +1,15 @@
 <template>
   <div class="app-container">
+    <!-- === 新增：顶部导航栏 === -->
+    <div class="page-navigation">
+      <el-page-header @back="goBack" content="视频详情页" title="返回列表">
+        <!-- 可选：在右侧加个面包屑或者当前状态 -->
+        <template slot="content">
+          <span class="header-title"> 视频详情 </span>
+        </template>
+      </el-page-header>
+    </div>
+
     <!-- 1. 顶部：视频信息与核心数据 -->
     <el-card class="video-header-card" shadow="never">
       <el-row :gutter="20">
@@ -141,7 +151,14 @@
           </el-table>
           <!-- 分页 -->
           <div class="pagination-container">
-            <el-pagination background layout="prev, pager, next" :total="100" />
+            <el-pagination
+              background
+              layout="prev, pager, next"
+              :total="danmakuPagination.total"
+              :page-size="danmakuPagination.pageSize"
+              :current-page.sync="danmakuPagination.currentPage"
+              @current-change="handleDanmakuPageChange"
+            />
           </div>
         </el-tab-pane>
 
@@ -160,7 +177,7 @@
 
           <!-- 评论表格 (无折叠箭头，直接内嵌展示) -->
           <el-table
-            :data="commentList"
+            :data="filteredCommentList"
             style="width: 100%; margin-top: 15px"
             border
           >
@@ -249,12 +266,6 @@
                 <el-button
                   type="text"
                   size="small"
-                  @click="handleReply(scope.row)"
-                  >回复</el-button
-                >
-                <el-button
-                  type="text"
-                  size="small"
                   style="color: #f56c6c"
                   @click="handleDelete(scope.row, 'comment')"
                   >删除</el-button
@@ -268,158 +279,52 @@
             class="pagination-container"
             style="text-align: right; margin-top: 20px"
           >
-            <el-pagination background layout="prev, pager, next" :total="50" />
+            <el-pagination
+              background
+              layout="prev, pager, next"
+              :total="commentPagination.total"
+              :page-size="commentPagination.pageSize"
+              :current-page.sync="commentPagination.currentPage"
+              @current-change="handleCommentPageChange"
+            />
           </div>
         </el-tab-pane>
       </el-tabs>
     </el-card>
-
-    <!-- 回复弹窗 (模拟) -->
-    <el-dialog title="回复评论" :visible.sync="replyDialogVisible" width="30%">
-      <el-input
-        type="textarea"
-        :rows="4"
-        placeholder="请输入回复内容"
-        v-model="replyContent"
-      >
-      </el-input>
-      <span slot="footer" class="dialog-footer">
-        <el-button @click="replyDialogVisible = false">取 消</el-button>
-        <el-button type="primary" @click="submitReply">发 送</el-button>
-      </span>
-    </el-dialog>
   </div>
 </template>
   
   <script>
+import { getMovieDetail } from "@/api/date/date.js";
+
 export default {
   name: "VideoDetail",
   data() {
     return {
+      danmakuPagination: {
+        currentPage: 1,
+        pageSize: 10,
+        total: 0,
+      },
+      commentPagination: {
+        currentPage: 1,
+        pageSize: 10,
+        total: 0,
+      },
+
       activeTab: "danmaku",
       currentId: null,
-      // 1. 模拟视频基础信息数据
-      videoInfo: {
-        id: 12345,
-        title: "【Vue实战】从零开始搭建B站后台管理系统",
-        cover:
-          "https://wpimg.wallstcn.com/f778738c-e4f8-4870-b634-56703b4acafe.gif", // 占位图
-        publishTime: "2023-10-24 18:00:00",
-        tags: ["Vue.js", "ElementUI", "前端开发"],
-        views: 234567,
-        likes: 12050,
-        danmakuCount: 8848,
-        commentCount: 1024,
-      },
+      videoInfo: {},
 
       // 2. 模拟弹幕数据
       danmakuFilter: "",
       selectedDanmaku: [],
-      danmakuList: [
-        {
-          id: 1,
-          timePoint: "00:15",
-          content: "第一！！",
-          color: "#FFFFFF",
-          sendTime: "2023-10-24 18:01:00",
-          sender: "user_001",
-        },
-        {
-          id: 2,
-          timePoint: "01:20",
-          content: "这个特效怎么做的？",
-          color: "#FF0000",
-          sendTime: "2023-10-24 18:05:22",
-          sender: "user_032",
-        },
-        {
-          id: 3,
-          timePoint: "03:45",
-          content: "高能预警！",
-          color: "#FFFF00",
-          sendTime: "2023-10-24 19:10:05",
-          sender: "user_555",
-        },
-        {
-          id: 4,
-          timePoint: "05:00",
-          content: "学会了，这就去对线",
-          color: "#FFFFFF",
-          sendTime: "2023-10-25 09:00:00",
-          sender: "user_888",
-        },
-        {
-          id: 5,
-          timePoint: "10:30",
-          content: "UP主好帅",
-          color: "#00FF00",
-          sendTime: "2023-10-25 12:30:00",
-          sender: "user_999",
-        },
-      ],
+      danmakuList: [],
 
       // 3. 模拟评论数据
       commentFilterType: "all",
       commentSearch: "",
-      commentList: [
-        {
-          id: 101,
-          username: "前端小王子",
-          avatar:
-            "https://wpimg.wallstcn.com/f778738c-e4f8-4870-b634-56703b4acafe.gif",
-          content: "教程非常详细，感谢UP主分享！",
-          likes: 233,
-          date: "2023-10-24 19:00",
-          isTop: true,
-          replyTo: null,
-          children: [
-            {
-              id: 1011,
-              username: "学习路上的小白",
-              avatar:
-                "https://wpimg.wallstcn.com/007ef517-bafd-4066-a6ef-3502ee892d74.jpg",
-              content: "同意！比React简单多了。",
-              replyToUser: null, // 直接回复层主
-              date: "2023-10-24 19:05",
-            },
-            {
-              id: 1012,
-              username: "React死忠粉",
-              avatar:
-                "https://wpimg.wallstcn.com/57ed425a-c71e-4201-9428-68760c0537c4.jpg",
-              content: "各有优劣吧，不要引战。",
-              replyToUser: "学习路上的小白", // 回复楼中楼
-              date: "2023-10-24 19:10",
-            },
-          ],
-        },
-        {
-          id: 102,
-          username: "Bug制造机",
-          avatar:
-            "https://wpimg.wallstcn.com/57ed425a-c71e-4201-9428-68760c0537c4.jpg",
-          content: "第5分20秒那个代码是不是写错了？",
-          likes: 12,
-          date: "2023-10-24 20:30",
-          isTop: false,
-          replyTo: null,
-        },
-        {
-          id: 103,
-          username: "路人甲",
-          avatar:
-            "https://wpimg.wallstcn.com/9e2a5d0a-bd5b-457f-848e-256094639a05.jpg",
-          content: "求源码地址",
-          likes: 5,
-          date: "2023-10-25 08:00",
-          isTop: false,
-          replyTo: null,
-        },
-      ],
-
-      // 回复相关
-      replyDialogVisible: false,
-      replyContent: "",
+      commentList: [],
       currentReplyRow: null,
     };
   },
@@ -439,21 +344,130 @@ export default {
         item.content.includes(this.danmakuFilter)
       );
     },
+    // 评论管理的过滤逻辑
+    filteredCommentList() {
+      const searchQuery = this.commentSearch.trim();
+      if (!searchQuery) {
+        // 如果没有搜索词，则返回原始列表
+        return this.commentList;
+      }
+
+      // 过滤逻辑：遍历所有的一级评论
+      return this.commentList.filter((comment) => {
+        // 检查一级评论是否匹配
+        const isRootMatch =
+          comment.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          comment.content.toLowerCase().includes(searchQuery.toLowerCase());
+
+        if (isRootMatch) {
+          // 如果一级评论匹配，保留它，并同时过滤其子评论
+          return true;
+        }
+
+        // 如果一级评论不匹配，检查它的子评论是否匹配
+        if (comment.children && comment.children.length > 0) {
+          const matchedChildren = comment.children.filter(
+            (subComment) =>
+              subComment.username
+                .toLowerCase()
+                .includes(searchQuery.toLowerCase()) ||
+              subComment.content
+                .toLowerCase()
+                .includes(searchQuery.toLowerCase())
+          );
+
+          // 如果有匹配的子评论，也保留这个一级评论，并更新其children为过滤后的结果
+          if (matchedChildren.length > 0) {
+            // 注意：这里会修改原始数据的引用。为了不污染原始数据，可以创建一个副本
+            comment.children = matchedChildren;
+            return true;
+          }
+        }
+
+        // 一级评论和子评论都不匹配
+        return false;
+      });
+    },
   },
   methods: {
-    // 模拟获取数据
-    fetchData(id) {
-      console.log("正在获取视频详情，ID:", id);
+    handleDanmakuPageChange(currentPage) {
+      this.danmakuPagination.currentPage = currentPage;
+    },
 
-      // 这里你可以写死一个判断，演示不同ID显示不同标题的效果
-      if (id == "12346") {
-        this.videoInfo.title = "2025年最新前端学习路线图，建议收藏！";
-        this.videoInfo.cover =
-          "https://wpimg.wallstcn.com/57ed425a-c71e-4201-9428-68760c0537c4.jpg";
+    handleCommentPageChange(currentPage) {
+      this.commentPagination.currentPage = currentPage;
+    },
+    goBack() {
+      // 优先尝试返回上一级路由
+      if (window.history.length > 1) {
+        this.$router.back();
       } else {
-        // 默认数据
-        this.videoInfo.title = "【Vue实战】从零开始搭建B站后台管理系统";
+        // 如果没有历史记录（比如直接输入网址进入的），跳转到首页或列表页
+        this.$router.push("/dashboard"); // 这里的路径根据你的实际路由调整
       }
+    },
+    async fetchData(id) {
+      try {
+        const response = await getMovieDetail(id);
+        const data = response.data;
+
+        // 映射后端数据到前端结构
+        this.videoInfo = {
+          id: data.videoId,
+          title: data.name,
+          cover: data.image,
+          publishTime: data.publishTime,
+          tags: [data.category],
+          views: data.playCount || 0,
+          likes: data.likeCount || 0,
+          danmakuCount: data.danmakuCount || 0,
+          commentCount: data.commentCount || 0,
+        };
+
+        // 将后端返回的弹幕列表映射到前端结构
+        this.danmakuList = data.danmakuList.map((danmaku) => ({
+          id: danmaku.id, // 如果后端没有提供ID，可以使用索引或其他唯一标识
+          timePoint: this.formatPlayTime(danmaku.playTime), // 将秒数转换为 MM:SS 格式
+          content: danmaku.content,
+          color: danmaku.color,
+          sendTime: danmaku.createTime,
+          sender: `用户:${danmaku.userId}`, // 或者根据需要格式化
+        }));
+
+        // 将后端返回的评论列表映射到前端结构
+        this.commentList = data.commentList.map((comment) => ({
+          ...comment,
+          id: comment.id,
+          username: comment.userId,
+          avatar: comment.avatar,
+          content: comment.content,
+          likes: comment.likeCount,
+          date: comment.createTime,
+          // children 已经在后端组装好了，可以直接使用
+          children: comment.children?.map((child) => ({
+            ...child,
+            username: child.userId,
+            avatar: child.avatar,
+            content: child.content,
+            likes: child.likeCount,
+            date: child.createTime,
+            // 子评论的 replyToUser 已经有了，无需修改
+          })),
+        }));
+        // 初始化分页信息
+        this.danmakuPagination.total = data.danmakuCount;
+        this.commentPagination.total = data.commentCount;
+      } catch (error) {
+        console.error("获取视频详情失败:", error);
+        this.$message.error("获取视频详情失败");
+      }
+    },
+    formatPlayTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      const formattedMins = mins.toString().padStart(2, "0");
+      const formattedSecs = secs.toString().padStart(2, "0");
+      return `${formattedMins}:${formattedSecs}`;
     },
     // 动态给表格行添加类名
     getRowClass({ row, rowIndex }) {
@@ -548,6 +562,40 @@ export default {
 </script>
   
   <style lang="scss" scoped>
+.page-navigation {
+  background: #ffffff;
+  padding: 16px 24px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08); /* 轻微的阴影提升质感 */
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #ebeef5; /* 可选：底部分割线 */
+}
+
+/* 调整标题文字样式，使其更突出 */
+.page-navigation ::v-deep .el-page-header__content {
+  font-weight: 600;
+  color: #303133;
+}
+
+.page-navigation ::v-deep .el-page-header__title {
+  font-size: 14px;
+  color: #606266;
+}
+
+/* 鼠标悬停在返回文字上时的颜色 */
+.page-navigation ::v-deep .el-page-header__left:hover .el-page-header__title,
+.page-navigation ::v-deep .el-page-header__left:hover .el-icon-back {
+  color: #409eff; /* Element UI 主题蓝 */
+}
+
+/* 原有的容器样式（建议加上背景色以突显卡片） */
+.app-container {
+  padding: 20px;
+  background-color: #f0f2f5; /* 浅灰背景，让白色卡片更明显 */
+  min-height: 100vh;
+}
 .app-container {
   padding: 20px;
   background-color: #f0f2f5;

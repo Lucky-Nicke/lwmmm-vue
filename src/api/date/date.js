@@ -30,3 +30,11 @@ export function getMovieDanmakuData() {
     method: 'get'
   })
 }
+
+export function getMovieDetail(id) {
+  return request({
+    url: `${BASE_URL}/singelMovieDetail`,
+    method: 'get',
+    params: { id } // 使用 params 传递 query 参数
+  })
+}

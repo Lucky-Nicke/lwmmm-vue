@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MyBili - 仿B站视频门户</title>
+    <style>
+      /* --- 基础重置与变量 --- */
+      :root {
+        --primary-color: #fb7299; /* B站粉 */
+        --bg-color: #f4f5f7;
+        --text-main: #222;
+        --text-muted: #999;
+        --card-bg: #fff;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+      }
+
+      body {
+        background-color: var(--bg-color);
+        color: var(--text-main);
+      }
+
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+
+      /* --- 顶部导航栏 --- */
+      .navbar {
+        background-color: var(--card-bg);
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .nav-left .logo {
+        font-size: 24px;
+        font-weight: bold;
+        color: var(--primary-color);
+      }
+
+      .nav-center .search-bar {
+        display: flex;
+        background: #e3e5e7;
+        border-radius: 6px;
+        padding: 6px 16px;
+        width: 400px;
+      }
+
+      .search-bar input {
+        border: none;
+        background: transparent;
+        outline: none;
+        width: 100%;
+        font-size: 14px;
+      }
+
+      .nav-right button {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 8px 24px;
+        border-radius: 6px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+
+      .nav-right button:hover {
+        background-color: #ff85a8;
+      }
+
+      /* --- 主体内容区 --- */
+      .container {
+        max-width: 1200px;
+        margin: 20px auto;
+        padding: 0 16px;
+        display: grid;
+        grid-template-columns: 1fr 300px; /* 左边主内容区，右边侧边栏 */
+        gap: 20px;
+      }
+
+      /* 左侧主内容：轮播图占位 + 视频列表 */
+      .main-content {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .banner {
+        background-color: var(--card-bg);
+        border-radius: 8px;
+        height: 300px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-muted);
+        font-size: 20px;
+        background-image: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+        color: white;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+      }
+
+      .video-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 16px;
+      }
+
+      /* 视频卡片样式 */
+      .video-card {
+        background: var(--card-bg);
+        border-radius: 8px;
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: pointer;
+      }
+
+      .video-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      .video-cover {
+        width: 100%;
+        height: 120px;
+        background-color: #e3e5e7;
+        /* 这里可以替换为真实的 img 标签 */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+
+      .video-info {
+        padding: 10px;
+      }
+
+      .video-title {
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 1.4;
+        height: 38px;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        margin-bottom: 8px;
+      }
+
+      .video-meta {
+        font-size: 12px;
+        color: var(--text-muted);
+        display: flex;
+        justify-content: space-between;
+      }
+
+      /* --- 右侧边栏：排行榜 --- */
+      .sidebar {
+        background-color: var(--card-bg);
+        border-radius: 8px;
+        padding: 16px;
+        height: fit-content;
+      }
+
+      .sidebar h3 {
+        font-size: 18px;
+        margin-bottom: 16px;
+      }
+
+      .rank-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 12px;
+        font-size: 14px;
+      }
+
+      .rank-num {
+        font-weight: bold;
+        font-size: 16px;
+        width: 24px;
+        color: var(--text-muted);
+      }
+
+      .rank-item:nth-child(1) .rank-num {
+        color: #f25d8e;
+      } /* 第一名红色 */
+      .rank-item:nth-child(2) .rank-num {
+        color: #ff8a27;
+      } /* 第二名橙色 */
+      .rank-item:nth-child(3) .rank-num {
+        color: #f6a623;
+      } /* 第三名黄色 */
+
+      .rank-title {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+      }
+
+      /* 响应式设计：屏幕变小时隐藏侧边栏 */
+      @media (max-width: 900px) {
+        .container {
+          grid-template-columns: 1fr;
+        }
+        .sidebar {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar">
+      <div class="nav-left">
+        <a href="#" class="logo">MyBili 📺</a>
+      </div>
+      <div class="nav-center">
+        <div class="search-bar">
+          <input type="text" placeholder="搜索你感兴趣的视频、UP主..." />
+        </div>
+      </div>
+      <div class="nav-right">
+        <button>投稿</button>
+      </div>
+    </nav>
+
+    <div class="container">
+      <main class="main-content">
+        <div class="banner">🌟 推荐视频轮播图区域</div>
+
+        <div class="video-grid">
+          <div class="video-card">
+            <div class="video-cover">封面图片占位</div>
+            <div class="video-info">
+              <div class="video-title">
+                这是一个非常有趣的视频标题，可能很长很长需要折行显示...
+              </div>
+              <div class="video-meta">
+                <span>UP主: 狂徒张三</span>
+                <span>▶ 10.2万</span>
+              </div>
+            </div>
+          </div>
+          <div class="video-card">
+            <div class="video-cover" style="background: #a8e6cf">图片占位</div>
+            <div class="video-info">
+              <div class="video-title">
+                【年度大作】耗时300天打造的绝美风景实拍混剪
+              </div>
+              <div class="video-meta">
+                <span>UP主: 摄影小王子</span>
+                <span>▶ 50.1万</span>
+              </div>
+            </div>
+          </div>
+          <div class="video-card">
+            <div class="video-cover" style="background: #dcedc1">图片占位</div>
+            <div class="video-info">
+              <div class="video-title">
+                前端速成：30分钟教你用 HTML 写一个网页
+              </div>
+              <div class="video-meta">
+                <span>UP主: 码农日记</span>
+                <span>▶ 8.8万</span>
+              </div>
+            </div>
+          </div>
+          <div class="video-card">
+            <div class="video-cover" style="background: #ffd3b6">图片占位</div>
+            <div class="video-info">
+              <div class="video-title">
+                今天做一道正宗的红烧肉，隔壁小孩都馋哭了！
+              </div>
+              <div class="video-meta">
+                <span>UP主: 美食老王</span>
+                <span>▶ 23.4万</span>
+              </div>
+            </div>
+          </div>
+          <div class="video-card">
+            <div class="video-cover">图片占位</div>
+            <div class="video-info">
+              <div class="video-title">日常 Vlog：记录美好的一天</div>
+              <div class="video-meta">
+                <span>UP主: Alice</span>
+                <span>▶ 1.2万</span>
+              </div>
+            </div>
+          </div>
+          <div class="video-card">
+            <div class="video-cover">图片占位</div>
+            <div class="video-info">
+              <div class="video-title">
+                爆笑解说：这个游戏的操作也太离谱了吧！
+              </div>
+              <div class="video-meta">
+                <span>UP主: 游戏天才</span>
+                <span>▶ 156万</span>
+              </div>
+            </div>
+          </div>
+          <div class="video-card">
+            <div class="video-cover">图片占位</div>
+            <div class="video-info">
+              <div class="video-title">硬核科普：量子力学到底在研究什么？</div>
+              <div class="video-meta">
+                <span>UP主: 科学狂人</span>
+                <span>▶ 33.2万</span>
+              </div>
+            </div>
+          </div>
+          <div class="video-card">
+            <div class="video-cover">图片占位</div>
+            <div class="video-info">
+              <div class="video-title">深夜电台：一首治愈心灵的轻音乐</div>
+              <div class="video-meta">
+                <span>UP主: 音乐工坊</span>
+                <span>▶ 5.5万</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <aside class="sidebar">
+        <h3>📈 全站排行榜</h3>
+        <div class="rank-list">
+          <div class="rank-item">
+            <span class="rank-num">1</span>
+            <span class="rank-title"
+              >爆笑解说：这个游戏的操作也太离谱了吧！</span
+            >
+          </div>
+          <div class="rank-item">
+            <span class="rank-num">2</span>
+            <span class="rank-title">【年度大作】耗时300天打造的绝美风景</span>
+          </div>
+          <div class="rank-item">
+            <span class="rank-num">3</span>
+            <span class="rank-title">今天做一道正宗的红烧肉，隔壁小孩馋哭</span>
+          </div>
+          <div class="rank-item">
+            <span class="rank-num">4</span>
+            <span class="rank-title">硬核科普：量子力学到底在研究什么？</span>
+          </div>
+          <div class="rank-item">
+            <span class="rank-num">5</span>
+            <span class="rank-title">前端速成：30分钟教你用 HTML 写网页</span>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </body>
+</html>
