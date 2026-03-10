@@ -54,3 +54,17 @@ export function removeComment(commentId) {
     params: { commentId } // 使用 params 传递 query 参数
   })
 }
+
+export function getHotMovie() {
+  return request({
+    url: `${BASE_URL}/getHotMovie`, // 请根据你的后端路由前缀调整
+    method: 'get'
+  })
+}
+
+export function getNewComment() {
+  return request({
+    url: `${BASE_URL}/getNewComment`, // 请根据你的后端路由前缀调整
+    method: 'get'
+  })
+}

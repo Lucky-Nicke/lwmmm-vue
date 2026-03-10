@@ -58,7 +58,7 @@
             <count-to
               :start-val="0"
               :end-val="totalPlayCount"
-              :duration="5000"
+              :duration="1500"
               class="card-panel-num"
             />
           </div>
@@ -123,7 +123,7 @@
       <el-col :xs="24" :sm="24" :lg="12">
         <el-card class="box-card tech-card">
           <div slot="header" class="clearfix">
-            <span class="tech-header-text">💬 弹幕实时流</span>
+            <span class="tech-header-text">💬 评论实时流</span>
           </div>
           <div class="comment-list">
             <div
@@ -131,7 +131,10 @@
               :key="index"
               class="comment-item"
             >
-              <div class="avatar-tech">{{ item.user[0] }}</div>
+              <div class="avatar-tech" v-if="item.avatar">
+                <img :src="item.avatar" alt="avatar" />
+              </div>
+              <span class="avatar-tech" v-else>{{ item.user[0] }}</span>
               <div class="content">
                 <div class="user-info">
                   <span class="username">{{ item.user }}</span>
@@ -160,6 +163,8 @@ import {
   getMovieStockData,
   getMoviePlaysData,
   getMovieDanmakuData,
+  getHotMovie,
+  getNewComment,
 } from "@/api/date/date.js";
 
 // 模拟4种不同类型的图表数据
@@ -193,45 +198,8 @@ export default {
       totalMovieCount: 0,
       totalPlayCount: 0,
       totalDanmakuCount: 0,
-      // 默认显示 'users' 的数据
-      // currentChartData: lineChartData.users,
-      hotMovies: [
-        { name: "流浪地球2", category: "科幻", views: "98,201" },
-        { name: "狂飙", category: "剧情", views: "87,110" },
-        { name: "奥本海默", category: "传记", views: "65,400" },
-        { name: "铃芽之旅", category: "动画", views: "54,221" },
-        { name: "黑客帝国", category: "科幻", views: "41,000" },
-      ],
-      comments: [
-        {
-          user: "Admin",
-          color: "#409EFF",
-          time: "刚刚",
-          movie: "123流浪地球2",
-          content: "特效炸裂，强烈推荐！",
-        },
-        {
-          user: "User007",
-          color: "#67C23A",
-          time: "1s ago",
-          movie: "狂飙",
-          content: "高启强演技太好了吧。",
-        },
-        {
-          user: "MovieFan",
-          color: "#E6A23C",
-          time: "5s ago",
-          movie: "奥本海默",
-          content: "诺兰出品，必属精品。",
-        },
-        {
-          user: "Guest",
-          color: "#F56C6C",
-          time: "10s ago",
-          movie: "泰坦尼克号",
-          content: "经典永不过时。",
-        },
-      ],
+      hotMovies: [],
+      comments: [],
     };
   },
   computed: {
@@ -241,6 +209,8 @@ export default {
     this.loadAllInitialCounts();
     this.loadInitialChartData();
     this.startClock();
+    this.fetchHotMovies(); // 在页面加载时获取一次热门影视数据
+    this.fetchComments(); // 在页面加载时获取一次最新评论数据
     window.addEventListener("resize", this.resizeChart);
   },
   beforeDestroy() {
@@ -249,6 +219,44 @@ export default {
     if (this.timer) clearInterval(this.timer);
   },
   methods: {
+    // 获取最新评论数据
+    async fetchComments() {
+      try {
+        const response = await getNewComment(); // 调用API
+        if (response.code === 200 && Array.isArray(response.data)) {
+          // 成功获取数据，直接更新 comments 数据
+          this.comments = response.data;
+        } else {
+          console.error("获取最新评论数据失败:", response.message);
+          // 可选：如果接口规范不一致，可能需要调整 data 的取值路径，例如 response.data.list
+          // this.comments = response.data?.list || [];
+        }
+      } catch (error) {
+        console.error("请求最新评论数据时发生网络错误:", error);
+        this.$message.error("网络错误，无法获取最新评论数据");
+        // 发生错误时不改变原有数据，或可以清空为 []
+        // this.comments = [];
+      }
+    },
+    // 获取热门影视数据
+    async fetchHotMovies() {
+      try {
+        const response = await getHotMovie(); // 调用API
+        if (response.code === 200 && Array.isArray(response.data)) {
+          // 成功获取数据，直接更新 hotMovies 数据
+          this.hotMovies = response.data;
+        } else {
+          console.error("获取热门影视数据失败:", response.message);
+          // 可选：如果接口规范不一致，可能需要调整 data 的取值路径，例如 response.data.list
+          // this.hotMovies = response.data?.list || [];
+        }
+      } catch (error) {
+        console.error("请求热门影视数据时发生网络错误:", error);
+        this.$message.error("网络错误，无法获取热门影视数据");
+        // 发生错误时不改变原有数据，或可以清空为 []
+        // this.hotMovies = [];
+      }
+    },
     async loadInitialChartData() {
       try {
         // 初始化时加载用户数据作为默认图表
@@ -804,6 +812,13 @@ $border-color: rgba(79, 172, 254, 0.3);
       margin-right: 15px;
       font-weight: bold;
       box-shadow: 0 0 5px $primary-color;
+      img {
+        width: 100%;
+        height: 100%;
+        border-radius: inherit; /* 继承父元素的圆角 */
+        object-fit: cover; /* 保持图片比例的同时填满容器，可能会裁剪部分图片 */
+        vertical-align: top; /* 消除图片底部可能产生的间隙 */
+      }
     }
 
     .content {
