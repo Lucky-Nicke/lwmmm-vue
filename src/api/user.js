@@ -18,6 +18,16 @@ export function getInfo(token) {
   })
 }
 
+export function getLessInfo(token) {
+  return request({
+    url: '/admin/system/sysUser/info',
+    method: 'get',
+    headers: {
+      token: token 
+    }
+  })
+}
+
 export function logout() {
   return request({
     url: '/admin/system/index/logout',

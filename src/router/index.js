@@ -64,6 +64,27 @@ export const constantRoutes = [
   },
 
   {
+    path: '/sysUser',
+    component: Layout,      // 关键：指定布局组件，这样右侧才会有框
+    hidden: true,           // 整个组在左侧菜单隐藏
+    redirect: '/sysUser/profile',
+    children: [
+      {
+        path: 'profile',    // 实际访问路径是 /sysUser/profile
+        name: 'SysUserProfile',
+        component: () => import('@/views/system/sysUser/userInfo'),
+        meta: {
+          title: '个人简介',
+          icon: 'user',
+          noCache: true,
+          // 如果你想让它高亮左侧某个菜单，可以加 activeMenu
+          // activeMenu: '/dashboard' 
+        }
+      }
+    ]
+  },
+
+  {
     path: '/video',
     component: Layout,
     hidden: true,

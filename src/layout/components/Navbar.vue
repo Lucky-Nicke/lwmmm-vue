@@ -18,12 +18,11 @@
           <router-link to="/">
             <el-dropdown-item> 主页 </el-dropdown-item>
           </router-link>
-          <a
-            target="_blank"
-            href="https://github.com/PanJiaChen/vue-admin-template/"
-          >
-            <el-dropdown-item>个人简介</el-dropdown-item>
-          </a>
+
+          <router-link to="/sysUser/profile">
+            <el-dropdown-item> 个人简介 </el-dropdown-item>
+          </router-link>
+
           <el-dropdown-item divided @click.native="logout">
             <span style="display: block">退出登录</span>
           </el-dropdown-item>
