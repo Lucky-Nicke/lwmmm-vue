@@ -38,3 +38,19 @@ export function getMovieDetail(id) {
     params: { id } // 使用 params 传递 query 参数
   })
 }
+
+export function removeDanmaku(danmakuId) {
+  return request({
+    url: `${BASE_URL}/deleteDanmaku`,
+    method: 'delete',
+    params: { danmakuId } // 使用 params 传递 query 参数
+  })
+}
+
+export function removeComment(commentId) {
+  return request({
+    url: `${BASE_URL}/deleteComment`,
+    method: 'delete',
+    params: { commentId } // 使用 params 传递 query 参数
+  })
+}

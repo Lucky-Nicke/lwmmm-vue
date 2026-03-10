@@ -1,9 +1,8 @@
 <template>
   <div class="app-container">
-    <!-- === 新增：顶部导航栏 === -->
+    <!-- === 顶部导航栏 === -->
     <div class="page-navigation">
       <el-page-header @back="goBack" content="视频详情页" title="返回列表">
-        <!-- 可选：在右侧加个面包屑或者当前状态 -->
         <template slot="content">
           <span class="header-title"> 视频详情 </span>
         </template>
@@ -84,7 +83,7 @@
     </el-card>
 
     <!-- 2. 下部：管理面板 (弹幕 & 评论) -->
-    <el-card class="management-card" shadow="never" style="margin-top: 20px">
+    <el-card class="management-card" shadow="never">
       <el-tabs v-model="activeTab">
         <!-- Tab 1: 弹幕管理 -->
         <el-tab-pane label="弹幕管理" name="danmaku">
@@ -92,21 +91,22 @@
             <el-input
               v-model="danmakuFilter"
               placeholder="搜索弹幕内容..."
-              style="width: 200px"
+              style="width: 250px"
               size="small"
               prefix-icon="el-icon-search"
             />
             <el-button
               type="danger"
               size="small"
-              style="margin-left: 10px"
+              style="margin-left: 15px"
               @click="batchDeleteDanmaku"
+              icon="el-icon-delete"
               >批量删除</el-button
             >
           </div>
 
           <el-table
-            :data="filteredDanmakuList"
+            :data="paginatedDanmakuList"
             style="width: 100%"
             stripe
             @selection-change="handleDanmakuSelection"
@@ -149,7 +149,7 @@
               </template>
             </el-table-column>
           </el-table>
-          <!-- 分页 -->
+
           <div class="pagination-container">
             <el-pagination
               background
@@ -162,31 +162,29 @@
           </div>
         </el-tab-pane>
 
-        <!-- Tab 2: 评论管理 (这里是修改后的新版设计) -->
+        <!-- Tab 2: 评论管理 -->
         <el-tab-pane label="评论管理" name="comments">
-          <!-- 顶部筛选栏 -->
           <div class="filter-container">
             <el-input
               v-model="commentSearch"
-              placeholder="搜索评论内容/用户..."
-              style="width: 200px; margin-left: 10px"
+              placeholder="搜索评论内容或用户名..."
+              style="width: 250px"
               size="small"
               prefix-icon="el-icon-search"
             />
           </div>
 
-          <!-- 评论表格 (无折叠箭头，直接内嵌展示) -->
           <el-table
-            :data="filteredCommentList"
+            :data="paginatedTopLevelComments"
             style="width: 100%; margin-top: 15px"
             border
           >
-            <!-- 列1：用户信息 -->
-            <el-table-column label="用户信息" width="180">
+            <!-- 用户信息 -->
+            <el-table-column label="用户信息" width="200">
               <template slot-scope="scope">
                 <div class="user-info-cell">
                   <el-avatar
-                    :size="32"
+                    :size="40"
                     :src="scope.row.avatar"
                     shape="square"
                   ></el-avatar>
@@ -198,56 +196,40 @@
               </template>
             </el-table-column>
 
-            <!-- 列2：评论内容 (包含一级和二级) -->
-            <el-table-column label="评论内容" min-width="400">
+            <!-- 评论内容 -->
+            <el-table-column label="评论内容" min-width="450">
               <template slot-scope="scope">
-                <!-- 一级评论本体 -->
-                <div class="root-comment-text">
-                  {{ scope.row.content }}
-                </div>
+                <!-- 一级主评论 -->
+                <div class="root-comment-text">{{ scope.row.content }}</div>
 
-                <!-- 二级评论区域 (灰色背景框) -->
-                <!-- 只有当 children 存在且长度大于0时才显示 -->
+                <!-- 子评论区域 -->
                 <div
                   v-if="scope.row.children && scope.row.children.length > 0"
-                  class="sub-comment-box"
+                  class="sub-comment-box-recursive"
                 >
-                  <div
-                    v-for="sub in scope.row.children"
-                    :key="sub.id"
-                    class="sub-comment-item"
-                  >
-                    <div class="sub-header">
-                      <span class="sub-user">{{ sub.username }}</span>
-                      <span v-if="sub.replyToUser" class="sub-target">
-                        回复 @{{ sub.replyToUser }}</span
-                      >
-                      <span class="sub-colon">：</span>
-                      <span class="sub-content">{{ sub.content }}</span>
-                    </div>
-                    <div class="sub-footer">
-                      <span class="time">{{ sub.date }}</span>
-                      <!-- 点击这里删除子评论，传入父ID以便查找 -->
-                      <el-button
-                        type="text"
-                        class="sub-del-btn"
-                        size="mini"
-                        @click="handleDelete(sub, 'comment', scope.row.id)"
-                        >删除</el-button
-                      >
-                    </div>
-                  </div>
+                  <comment-item
+                    v-for="subComment in scope.row.children"
+                    :key="subComment.id"
+                    :comment="subComment"
+                    :depth="1"
+                    @delete-sub="handleDelete($event, 'comment', scope.row.id)"
+                  />
                 </div>
               </template>
             </el-table-column>
 
-            <!-- 列3：数据 -->
+            <!-- 数据与时间 -->
             <el-table-column
               prop="likes"
               label="点赞"
-              width="80"
+              width="90"
               align="center"
-            />
+            >
+              <template slot-scope="scope">
+                <i class="el-icon-star-on" style="color: #909399"></i>
+                {{ scope.row.likes }}
+              </template>
+            </el-table-column>
             <el-table-column
               prop="date"
               label="发布时间"
@@ -255,10 +237,10 @@
               align="center"
             />
 
-            <!-- 列4：操作 (针对一级评论) -->
+            <!-- 一级评论操作 -->
             <el-table-column
               label="操作"
-              width="120"
+              width="100"
               align="center"
               fixed="right"
             >
@@ -266,7 +248,7 @@
                 <el-button
                   type="text"
                   size="small"
-                  style="color: #f56c6c"
+                  class="text-danger"
                   @click="handleDelete(scope.row, 'comment')"
                   >删除</el-button
                 >
@@ -274,11 +256,7 @@
             </el-table-column>
           </el-table>
 
-          <!-- 评论分页 -->
-          <div
-            class="pagination-container"
-            style="text-align: right; margin-top: 20px"
-          >
+          <div class="pagination-container">
             <el-pagination
               background
               layout="prev, pager, next"
@@ -294,124 +272,208 @@
   </div>
 </template>
   
-  <script>
-import { getMovieDetail } from "@/api/date/date.js";
+<script>
+import {
+  getMovieDetail,
+  removeDanmaku,
+  removeComment,
+} from "@/api/date/date.js";
+
+const CommentItem = {
+  name: "CommentItem",
+  functional: true,
+  props: ["comment", "depth"],
+  render(h, ctx) {
+    const { comment, depth } = ctx.props;
+    const { listeners } = ctx;
+    const maxDepth = 5;
+
+    // 美化：动态深度样式设计（缩进 + 左侧引导线）
+    const depthStyle = {
+      marginLeft: depth > 1 ? `20px` : "0",
+      paddingLeft: depth > 1 ? "12px" : "0",
+      borderLeft: depth > 1 ? "2px solid #e4e7ed" : "none",
+      marginTop: "10px",
+    };
+
+    // 渲染单个评论节点
+    const renderItem = (item) => {
+      return h("div", { staticClass: "sub-node", style: depthStyle }, [
+        h("div", { staticClass: "sub-header" }, [
+          h("span", { staticClass: "sub-user" }, item.username),
+          item.replyToUser
+            ? h(
+                "span",
+                { staticClass: "sub-target" },
+                ` 回复 @${item.replyToUser}`
+              )
+            : null,
+          h("span", { staticClass: "sub-colon" }, "："),
+          h("span", { staticClass: "sub-content" }, item.content),
+        ]),
+        h("div", { staticClass: "sub-footer" }, [
+          h("span", { staticClass: "time" }, item.date),
+          h(
+            "span",
+            {
+              staticClass: "sub-del-btn",
+              // 修复：必须使用 listeners['delete-sub'] 才能正确响应带横线的事件
+              on: {
+                click: () =>
+                  listeners["delete-sub"] && listeners["delete-sub"](item),
+              },
+            },
+            "删除"
+          ),
+        ]),
+      ]);
+    };
+
+    // 渲染递归子项
+    const renderChildren = (children) => {
+      if (!children || children.length === 0 || depth >= maxDepth) return null;
+      return children.map((child) =>
+        h(CommentItem, {
+          key: child.id,
+          props: { comment: child, depth: depth + 1 },
+          on: listeners, // 继续透传事件
+        })
+      );
+    };
+
+    return h("div", [renderItem(comment), renderChildren(comment.children)]);
+  },
+};
 
 export default {
   name: "VideoDetail",
+  components: { CommentItem },
   data() {
     return {
-      danmakuPagination: {
-        currentPage: 1,
-        pageSize: 10,
-        total: 0,
-      },
-      commentPagination: {
-        currentPage: 1,
-        pageSize: 10,
-        total: 0,
-      },
-
       activeTab: "danmaku",
       currentId: null,
       videoInfo: {},
 
-      // 2. 模拟弹幕数据
+      danmakuPagination: { currentPage: 1, pageSize: 10, total: 0 },
       danmakuFilter: "",
       selectedDanmaku: [],
       danmakuList: [],
 
-      // 3. 模拟评论数据
-      commentFilterType: "all",
+      commentPagination: { currentPage: 1, pageSize: 10, total: 0 },
       commentSearch: "",
       commentList: [],
-      currentReplyRow: null,
     };
   },
   created() {
-    // 1. 获取路由参数中的 id
     const id = this.$route.params.id;
     this.currentId = id;
-
-    // 2. 根据ID调用后端接口获取数据 (此处模拟)
     this.fetchData(id);
   },
   computed: {
-    // 简单的前端过滤逻辑，实际项目中由后端处理
+    topLevelComments() {
+      return this.commentList.filter((comment) => !comment.parentId);
+    },
+    paginatedTopLevelComments() {
+      const start =
+        (this.commentPagination.currentPage - 1) *
+        this.commentPagination.pageSize;
+      const end = start + this.commentPagination.pageSize;
+      return this.filteredTopLevelComments.slice(start, end);
+    },
     filteredDanmakuList() {
       if (!this.danmakuFilter) return this.danmakuList;
       return this.danmakuList.filter((item) =>
         item.content.includes(this.danmakuFilter)
       );
     },
-    // 评论管理的过滤逻辑
     filteredCommentList() {
       const searchQuery = this.commentSearch.trim();
-      if (!searchQuery) {
-        // 如果没有搜索词，则返回原始列表
-        return this.commentList;
-      }
+      if (!searchQuery) return this.commentList;
 
-      // 过滤逻辑：遍历所有的一级评论
-      return this.commentList.filter((comment) => {
-        // 检查一级评论是否匹配
-        const isRootMatch =
-          comment.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          comment.content.toLowerCase().includes(searchQuery.toLowerCase());
+      const filterRecursively = (comments) => {
+        return comments.filter((comment) => {
+          const isMatch =
+            comment.username
+              .toLowerCase()
+              .includes(searchQuery.toLowerCase()) ||
+            comment.content.toLowerCase().includes(searchQuery.toLowerCase());
 
-        if (isRootMatch) {
-          // 如果一级评论匹配，保留它，并同时过滤其子评论
-          return true;
-        }
-
-        // 如果一级评论不匹配，检查它的子评论是否匹配
-        if (comment.children && comment.children.length > 0) {
-          const matchedChildren = comment.children.filter(
-            (subComment) =>
-              subComment.username
-                .toLowerCase()
-                .includes(searchQuery.toLowerCase()) ||
-              subComment.content
-                .toLowerCase()
-                .includes(searchQuery.toLowerCase())
-          );
-
-          // 如果有匹配的子评论，也保留这个一级评论，并更新其children为过滤后的结果
-          if (matchedChildren.length > 0) {
-            // 注意：这里会修改原始数据的引用。为了不污染原始数据，可以创建一个副本
-            comment.children = matchedChildren;
+          if (isMatch) {
+            if (comment.children) {
+              comment.children = filterRecursively(comment.children);
+            }
             return true;
           }
-        }
 
-        // 一级评论和子评论都不匹配
-        return false;
-      });
+          if (comment.children && comment.children.length > 0) {
+            const filteredChildren = filterRecursively(comment.children);
+            if (filteredChildren.length > 0) {
+              comment.children = filteredChildren;
+              return true;
+            }
+          }
+          return false;
+        });
+      };
+      return filterRecursively(this.commentList);
+    },
+    paginatedDanmakuList() {
+      const start =
+        (this.danmakuPagination.currentPage - 1) *
+        this.danmakuPagination.pageSize;
+      const end = start + this.danmakuPagination.pageSize;
+      return this.filteredDanmakuList.slice(start, end);
+    },
+    filteredTopLevelComments() {
+      return this.filteredCommentList.filter((comment) => !comment.parentId);
+    },
+  },
+  watch: {
+    // 监听过滤后的一级评论列表数量变化
+    "filteredTopLevelComments.length"(newLength) {
+      this.commentPagination.total = newLength;
+      // 如果当前页没有数据了，重置到第一页
+      if (
+        this.commentPagination.total > 0 &&
+        this.paginatedTopLevelComments.length === 0 &&
+        this.commentPagination.currentPage > 1
+      ) {
+        this.commentPagination.currentPage = 1;
+      }
     },
   },
   methods: {
-    handleDanmakuPageChange(currentPage) {
-      this.danmakuPagination.currentPage = currentPage;
-    },
-
-    handleCommentPageChange(currentPage) {
-      this.commentPagination.currentPage = currentPage;
-    },
     goBack() {
-      // 优先尝试返回上一级路由
       if (window.history.length > 1) {
         this.$router.back();
       } else {
-        // 如果没有历史记录（比如直接输入网址进入的），跳转到首页或列表页
-        this.$router.push("/dashboard"); // 这里的路径根据你的实际路由调整
+        this.$router.push("/dashboard");
       }
     },
+    handleDanmakuPageChange(val) {
+      this.danmakuPagination.currentPage = val;
+    },
+    handleCommentPageChange(val) {
+      this.commentPagination.currentPage = val;
+    },
+    formatNumber(num) {
+      return num >= 10000 ? (num / 10000).toFixed(1) + "w" : num;
+    },
+    formatPlayTime(seconds) {
+      const mins = Math.floor(seconds / 60)
+        .toString()
+        .padStart(2, "0");
+      const secs = Math.floor(seconds % 60)
+        .toString()
+        .padStart(2, "0");
+      return `${mins}:${secs}`;
+    },
+
     async fetchData(id) {
       try {
         const response = await getMovieDetail(id);
         const data = response.data;
 
-        // 映射后端数据到前端结构
         this.videoInfo = {
           id: data.videoId,
           title: data.name,
@@ -424,296 +486,212 @@ export default {
           commentCount: data.commentCount || 0,
         };
 
-        // 将后端返回的弹幕列表映射到前端结构
         this.danmakuList = data.danmakuList.map((danmaku) => ({
-          id: danmaku.id, // 如果后端没有提供ID，可以使用索引或其他唯一标识
-          timePoint: this.formatPlayTime(danmaku.playTime), // 将秒数转换为 MM:SS 格式
+          id: danmaku.id,
+          timePoint: this.formatPlayTime(danmaku.playTime),
           content: danmaku.content,
           color: danmaku.color,
           sendTime: danmaku.createTime,
-          sender: `用户:${danmaku.userId}`, // 或者根据需要格式化
+          sender: `用户:${danmaku.userId}`,
         }));
 
-        // 将后端返回的评论列表映射到前端结构
-        this.commentList = data.commentList.map((comment) => ({
-          ...comment,
-          id: comment.id,
-          username: comment.userId,
-          avatar: comment.avatar,
-          content: comment.content,
-          likes: comment.likeCount,
-          date: comment.createTime,
-          // children 已经在后端组装好了，可以直接使用
-          children: comment.children?.map((child) => ({
-            ...child,
-            username: child.userId,
-            avatar: child.avatar,
-            content: child.content,
-            likes: child.likeCount,
-            date: child.createTime,
-            // 子评论的 replyToUser 已经有了，无需修改
-          })),
-        }));
-        // 初始化分页信息
+        // 定义一个辅助函数，用于递归处理评论并添加 parentId
+        const processComments = (comments, parentId = null) => {
+          return comments.map((comment) => {
+            return {
+              ...comment,
+              id: comment.id,
+              username: comment.userId,
+              avatar: comment.avatar,
+              content: comment.content,
+              likes: comment.likeCount,
+              date: comment.createTime,
+              parentId, // 明确设置 parentId
+              children: comment.children
+                ? processComments(comment.children, comment.id)
+                : [],
+            };
+          });
+        };
+
+        // 使用辅助函数处理评论列表
+        this.commentList = processComments(data.commentList);
+
+        // 设置一级评论的总数
+        this.commentPagination.total = this.commentList.filter(
+          (comment) => !comment.parentId
+        ).length;
         this.danmakuPagination.total = data.danmakuCount;
-        this.commentPagination.total = data.commentCount;
       } catch (error) {
         console.error("获取视频详情失败:", error);
         this.$message.error("获取视频详情失败");
       }
     },
-    formatPlayTime(seconds) {
-      const mins = Math.floor(seconds / 60);
-      const secs = Math.floor(seconds % 60);
-      const formattedMins = mins.toString().padStart(2, "0");
-      const formattedSecs = secs.toString().padStart(2, "0");
-      return `${formattedMins}:${formattedSecs}`;
-    },
-    // 动态给表格行添加类名
-    getRowClass({ row, rowIndex }) {
-      // 逻辑：如果这一行没有子评论 (children 不存在 或 长度为0)
-      if (!row.children || row.children.length === 0) {
-        return "no-expand-arrow"; // 返回这个类名，去 CSS 里控制隐藏
-      }
-      return ""; // 有子评论，不加类名，正常显示箭头
-    },
-    // 格式化数字 (例如 12000 -> 1.2w)
-    formatNumber(num) {
-      return num >= 10000 ? (num / 10000).toFixed(1) + "w" : num;
-    },
 
-    // 弹幕多选
     handleDanmakuSelection(val) {
       this.selectedDanmaku = val;
     },
 
-    // 批量删除弹幕
-    batchDeleteDanmaku() {
+    async batchDeleteDanmaku() {
       if (this.selectedDanmaku.length === 0) {
-        this.$message.warning("请先选择要删除的弹幕");
-        return;
+        return this.$message.warning("请先选择要删除的弹幕");
       }
       this.$confirm(
         `确定要删除选中的 ${this.selectedDanmaku.length} 条弹幕吗?`,
         "提示",
-        {
-          confirmButtonText: "确定",
-          cancelButtonText: "取消",
-          type: "warning",
+        { type: "warning" }
+      ).then(async () => {
+        try {
+          // 提取所有选中弹幕的ID
+          const idsToDelete = this.selectedDanmaku.map((item) => item.id);
+
+          // 创建一个Promise数组，对每个ID发起删除请求
+          const deletePromises = idsToDelete.map((id) => removeDanmaku(id));
+
+          // 等待所有删除请求完成
+          const results = await Promise.allSettled(deletePromises);
+
+          // 计算成功和失败的数量
+          const succeeded = results.filter(
+            (result) =>
+              result.status === "fulfilled" && result.value.code === 200
+          ).length;
+          const failed = results.length - succeeded;
+
+          if (failed === 0) {
+            // 如果全部删除成功
+            this.$message.success(`成功删除 ${succeeded} 条弹幕`);
+          } else {
+            // 如果有部分失败
+            this.$message.warning(
+              `批量操作完成，成功 ${succeeded} 条，失败 ${failed} 条`
+            );
+          }
+
+          // 无论成功与否，都从本地列表中移除已选中的项目以更新UI
+          this.danmakuList = this.danmakuList.filter(
+            (item) => !idsToDelete.includes(item.id)
+          );
+
+          // 清空选中状态
+          this.selectedDanmaku = [];
+        } catch (error) {
+          console.error("批量删除弹幕失败:", error);
+          this.$message.error("批量删除请求失败，请稍后重试");
         }
-      ).then(() => {
-        // TODO: 调用后端API
-        this.$message.success("删除成功");
-        // 模拟前端删除
-        const ids = this.selectedDanmaku.map((item) => item.id);
-        this.danmakuList = this.danmakuList.filter(
-          (item) => !ids.includes(item.id)
-        );
       });
     },
 
-    // 单个删除 (通用)
-    handleDelete(row, type, parentId = null) {
+    async handleDelete(row, type, parentId = null) {
       const text = parentId ? "子评论" : type === "danmaku" ? "弹幕" : "评论";
-
       this.$confirm(`确定删除这条${text}吗?`, "警告", { type: "warning" }).then(
-        () => {
-          if (parentId) {
-            // 删除子评论逻辑（前端模拟）
-            const parent = this.commentList.find((p) => p.id === parentId);
-            if (parent) {
-              parent.children = parent.children.filter(
-                (child) => child.id !== row.id
-              );
-            }
-          } else {
-            // 删除主评论逻辑
+        async () => {
+          try {
+            let success = false;
             if (type === "danmaku") {
-              this.danmakuList = this.danmakuList.filter(
-                (item) => item.id !== row.id
-              );
+              // 调用删除弹幕API
+              const response = await removeDanmaku(row.id);
+              success = response.code === 200; // 根据您的接口实际返回字段调整判断条件
             } else {
-              this.commentList = this.commentList.filter(
-                (item) => item.id !== row.id
-              );
+              // 调用删除评论API
+              const response = await removeComment(row.id);
+              success = response.code === 200; // 根据您的接口实际返回字段调整判断条件
             }
+
+            if (success) {
+              this.$message.success("删除成功");
+
+              // 成功后再从本地列表中移除，保持UI同步
+              if (parentId) {
+                // 删除子评论的逻辑保持不变
+                const parent = this.commentList.find((p) => p.id === parentId);
+                if (parent) {
+                  const deleteRecursive = (items) => {
+                    for (let i = 0; i < items.length; i++) {
+                      if (items[i].id === row.id) {
+                        items.splice(i, 1);
+                        return true;
+                      }
+                      if (items[i].children && items[i].children.length) {
+                        if (deleteRecursive(items[i].children)) return true;
+                      }
+                    }
+                    return false;
+                  };
+                  deleteRecursive(parent.children);
+                }
+              } else {
+                if (type === "danmaku") {
+                  this.danmakuList = this.danmakuList.filter(
+                    (item) => item.id !== row.id
+                  );
+                } else {
+                  this.commentList = this.commentList.filter(
+                    (item) => item.id !== row.id
+                  );
+                }
+              }
+            } else {
+              // 根据您的接口规范，此处可能需要调整错误提示方式
+              this.$message.error("删除失败");
+            }
+          } catch (error) {
+            console.error("删除失败:", error);
+            this.$message.error("删除请求失败，请稍后重试");
           }
-          this.$message.success("删除成功");
         }
       );
-    },
-
-    // 打开回复框
-    handleReply(row) {
-      this.currentReplyRow = row;
-      this.replyContent = "";
-      this.replyDialogVisible = true;
-    },
-
-    // 提交回复
-    submitReply() {
-      if (!this.replyContent.trim()) return;
-      this.$message.success(`已回复用户 ${this.currentReplyRow.username}`);
-      this.replyDialogVisible = false;
-      // TODO: 调用后端API发送回复
     },
   },
 };
 </script>
   
-  <style lang="scss" scoped>
-.page-navigation {
-  background: #ffffff;
-  padding: 16px 24px;
-  margin-bottom: 20px;
-  border-radius: 4px;
-  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08); /* 轻微的阴影提升质感 */
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid #ebeef5; /* 可选：底部分割线 */
-}
-
-/* 调整标题文字样式，使其更突出 */
-.page-navigation ::v-deep .el-page-header__content {
-  font-weight: 600;
-  color: #303133;
-}
-
-.page-navigation ::v-deep .el-page-header__title {
-  font-size: 14px;
-  color: #606266;
-}
-
-/* 鼠标悬停在返回文字上时的颜色 */
-.page-navigation ::v-deep .el-page-header__left:hover .el-page-header__title,
-.page-navigation ::v-deep .el-page-header__left:hover .el-icon-back {
-  color: #409eff; /* Element UI 主题蓝 */
-}
-
-/* 原有的容器样式（建议加上背景色以突显卡片） */
-.app-container {
-  padding: 20px;
-  background-color: #f0f2f5; /* 浅灰背景，让白色卡片更明显 */
-  min-height: 100vh;
-}
+<style lang="scss" scoped>
+/* ================= 全局 & 布局结构 ================= */
 .app-container {
   padding: 20px;
   background-color: #f0f2f5;
   min-height: 100vh;
 }
 
-/* 筛选栏通用样式 */
-.filter-container {
-  display: flex;
-  align-items: center;
-  padding-bottom: 0;
-}
-
-/* 表格内用户信息 */
-.user-info-cell {
-  display: flex;
-  align-items: center;
-  .user-meta {
-    margin-left: 10px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    line-height: 1.3;
-    .username {
-      font-weight: bold;
-      font-size: 13px;
-      color: #333;
-    }
-    .id-text {
-      font-size: 12px;
-      color: #999;
-    }
-  }
-}
-
-/* 一级评论文本 */
-.root-comment-text {
-  font-size: 14px;
-  color: #333;
-  margin-bottom: 8px;
-  line-height: 1.5;
-}
-
-/* 二级评论容器（灰色盒子） */
-.sub-comment-box {
-  background-color: #f4f4f5; /* 浅灰色背景 */
+.page-navigation {
+  background: #ffffff;
+  padding: 16px 24px;
+  margin-bottom: 20px;
   border-radius: 4px;
-  padding: 8px 12px;
-  margin-top: 8px;
+  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
 
-  .sub-comment-item {
-    padding: 6px 0;
-    border-bottom: 1px dashed #dcdfe6; /* 虚线分隔 */
-
-    &:last-child {
-      border-bottom: none;
-      padding-bottom: 0;
-    }
-
-    .sub-header {
-      font-size: 13px;
-      line-height: 1.4;
-      .sub-user {
-        color: #409eff;
-        font-weight: 500;
-        cursor: pointer;
-      }
-      .sub-target {
-        color: #909399;
-        font-size: 12px;
-      }
-      .sub-colon {
-        margin: 0 2px;
-      }
-      .sub-content {
-        color: #606266;
-      }
-    }
-
-    .sub-footer {
-      display: flex;
-      justify-content: space-between; /* 时间靠左，删除靠右 */
-      align-items: center;
-      margin-top: 4px;
-
-      .time {
-        font-size: 12px;
-        color: #999;
-      }
-      .sub-del-btn {
-        padding: 0;
-        font-size: 12px;
-        color: #f56c6c;
-        /* 鼠标悬停变色 */
-        &:hover {
-          color: #ff0000;
-          text-decoration: underline;
-        }
-      }
-    }
+  ::v-deep .el-page-header__content {
+    font-weight: 600;
+    color: #303133;
+  }
+  ::v-deep .el-page-header__title {
+    font-size: 14px;
+    color: #606266;
+  }
+  ::v-deep .el-page-header__left:hover .el-page-header__title,
+  ::v-deep .el-page-header__left:hover .el-icon-back {
+    color: #409eff;
   }
 }
 
 .text-danger {
   color: #f56c6c;
+  &:hover {
+    color: #ff4949;
+  }
 }
 
-/* 顶部视频卡片样式 */
+/* ================= 视频信息卡片 ================= */
 .video-header-card {
   margin-bottom: 20px;
+  border: none;
 
   .video-thumb-wrapper {
-    position: relative;
-    border-radius: 4px;
+    border-radius: 6px;
     overflow: hidden;
     height: 160px;
     background: #000;
-
     .video-cover {
       width: 100%;
       height: 100%;
@@ -728,15 +706,15 @@ export default {
 
     .video-title {
       margin: 0;
-      font-size: 20px;
+      font-size: 22px;
       color: #303133;
+      white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      white-space: nowrap;
     }
 
     .video-tags {
-      margin-top: 10px;
+      margin-top: 8px;
       .publish-time {
         font-size: 13px;
         color: #909399;
@@ -745,70 +723,124 @@ export default {
     }
 
     .data-row {
-      margin-top: 20px;
+      margin-top: auto;
       text-align: center;
-
       .data-item {
+        background: #f8f9fa;
+        padding: 15px 0;
+        border-radius: 6px;
         .label {
-          font-size: 14px;
+          font-size: 13px;
           color: #909399;
-          margin-bottom: 5px;
-          i {
-            margin-right: 5px;
-          }
+          margin-bottom: 8px;
         }
         .value {
-          font-size: 20px;
+          font-size: 22px;
           font-weight: bold;
           color: #409eff;
         }
       }
     }
+  }
+}
 
-    .action-bar {
-      margin-top: auto;
-      text-align: right;
+/* ================= 管理面板通用 ================= */
+.management-card {
+  border: none;
+  .filter-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+  }
+  .pagination-container {
+    margin-top: 20px;
+    text-align: right;
+  }
+}
+
+/* ================= 评论表格区域美化 ================= */
+/* 表格用户信息列 */
+.user-info-cell {
+  display: flex;
+  align-items: center;
+  .user-meta {
+    margin-left: 12px;
+    .username {
+      font-weight: 600;
+      font-size: 14px;
+      color: #303133;
+    }
+    .id-text {
+      font-size: 12px;
+      color: #909399;
+      margin-top: 4px;
     }
   }
 }
 
-/* 管理面板样式 */
-.management-card {
-  .filter-container {
-    margin-bottom: 15px;
-    display: flex;
-    align-items: center;
-  }
+/* 一级主评论 */
+.root-comment-text {
+  font-size: 14px;
+  color: #303133;
+  line-height: 1.6;
+}
 
-  .text-danger {
+/* 递归子评论容器框 */
+.sub-comment-box-recursive {
+  background-color: #f8f9fa; /* 更柔和的护眼灰色 */
+  border: 1px solid #ebeef5;
+  border-radius: 6px;
+  padding: 10px 15px;
+  margin-top: 12px;
+}
+
+/* 递归组件(函数式组件)内部样式，需用 ::v-deep 穿透 */
+::v-deep .sub-node {
+  padding-bottom: 6px;
+  &:last-child {
+    padding-bottom: 0;
+  }
+}
+::v-deep .sub-header {
+  font-size: 13px;
+  line-height: 1.6;
+  .sub-user {
+    color: #409eff;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .sub-target {
+    color: #909399;
+    font-size: 12px;
+  }
+  .sub-colon {
+    color: #303133;
+    font-weight: bold;
+    margin: 0 4px;
+  }
+  .sub-content {
+    color: #606266;
+    word-break: break-all;
+  }
+}
+::v-deep .sub-footer {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 15px; /* 时间与删除按钮间的间距 */
+  .time {
+    font-size: 12px;
+    color: #b0b3b9;
+  }
+  .sub-del-btn {
+    font-size: 12px;
     color: #f56c6c;
+    cursor: pointer;
+    transition: all 0.3s;
     &:hover {
       color: #ff4949;
+      text-decoration: underline;
     }
-  }
-
-  .user-info-cell {
-    display: flex;
-    align-items: center;
-    .username {
-      margin-left: 10px;
-      font-weight: 500;
-      color: #606266;
-    }
-  }
-
-  .reply-quote {
-    background: #f4f4f5;
-    padding: 5px;
-    font-size: 12px;
-    color: #909399;
-    border-radius: 4px;
-    margin-top: 5px;
-  }
-
-  .pagination-container {
-    margin-top: 20px;
-    text-align: right;
   }
 }
 </style>
