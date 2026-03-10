@@ -36,13 +36,19 @@ export const constantRoutes = [
   {
     path: '/login',
     component: () => import('@/views/login/index'),
-    hidden: true
+    hidden: true,
+    meta: {
+      title: '登录界面'
+    }
   },
 
   {
     path: '/reset-password',
     component: () => import('@/views/login/reset'), // 确保文件名叫 reset.vue
-    hidden: true
+    hidden: true,
+    meta: {
+      title: '修改密码'
+    }
   },
 
   // {
@@ -50,6 +56,15 @@ export const constantRoutes = [
   //   component: () => import('@/views/404'),
   //   hidden: true
   // },
+
+  {
+    path: '/index', // 门户页面的实际路径
+    component: () => import('@/views/videoIndex/index'), // 仍然需要 Layout 来承载页面的基本框架（头部、内容区等）
+    hidden: true,
+    meta: {
+      title: '视频门户'
+    } // 关键：将整个 '/index' 分组隐藏在侧边栏
+  },
 
   {
     path: '/',
