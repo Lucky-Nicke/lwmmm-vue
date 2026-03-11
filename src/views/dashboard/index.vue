@@ -95,7 +95,7 @@
       <el-col :xs="24" :sm="24" :lg="12">
         <el-card class="box-card tech-card">
           <div slot="header" class="clearfix">
-            <span class="tech-header-text">🔥 热门影视热度监控</span>
+            <span class="tech-header-text">热门影视热度监控</span>
           </div>
           <el-table :data="hotMovies" style="width: 100%" class="tech-table">
             <el-table-column type="index" width="50">
@@ -481,7 +481,7 @@ $bg-color: #0b0f19;
 $panel-bg: rgba(20, 30, 60, 0.6);
 $primary-color: #00f2fe; // 青色
 $secondary-color: #4facfe; // 蓝色
-$purple-color: #b527ff; // 新增紫色，用于弹幕
+$purple-color: #b527ff; // 紫色，用于弹幕
 $text-color: #e0e0e0;
 $border-color: rgba(79, 172, 254, 0.3);
 

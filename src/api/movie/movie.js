@@ -50,6 +50,26 @@ export default {
       url: `${BASE_URL}/getPlayAuth/${id}`,
       method: 'get'
     })
+  },
+  // 返回全部视频信息
+  getAllVideoInfo() {
+    return request({
+      url: `${BASE_URL}/getAllVideoInfo`,
+      method: 'post'
+    })
+  },
+  // 返回推荐视频信息
+  getHotVideoInfo() {
+    return request({
+      url: `${BASE_URL}/getHotVideoInfo`,
+      method: 'post'
+    })
+  },
+  // 返回排行榜视频信息
+  getHotWatchVideoInfo() {
+    return request({
+      url: `${BASE_URL}/getHotWatchVideoInfo`,
+      method: 'post'
+    })
   }
-
 }

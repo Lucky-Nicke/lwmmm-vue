@@ -1,6 +1,7 @@
 import Vue from 'vue'
 import Router from 'vue-router'
 import VideoDetail from '@/views/system/sysMovie/VideoDetail.vue' // 请根据您实际存放 VideoDetail.vue 的路径进行修改
+import VideoPortalIndex from '@/views/videoIndex/index'
 
 
 Vue.use(Router)
@@ -58,12 +59,29 @@ export const constantRoutes = [
   // },
 
   {
-    path: '/index', // 门户页面的实际路径
-    component: () => import('@/views/videoIndex/index'), // 仍然需要 Layout 来承载页面的基本框架（头部、内容区等）
+    path: '/index',               // 门户页面的基础路径
+    component: VideoPortalIndex,  // 将此路径的组件设为 VideoPortalIndex
+    name: 'VideoPortalIndex',     // 给门户首页一个名称，方便编程式导航
+    // 注意：这里的 hidden 可以根据你的需求决定是否显示在侧边栏，但通常门户页不会在管理后台的侧边栏
     hidden: true,
     meta: {
-      title: '视频门户'
-    } // 关键：将整个 '/index' 分组隐藏在侧边栏
+      title: '视频门户',
+      icon: 'guide'
+    },
+    // 门户内的子路由，视频详情页现在是 /index 的子路由
+    children: [
+      {
+        path: 'video/:id', // 实际路径将是 /index/video/:id
+        name: 'VideoDetail', // 命名路由方便跳转
+        // 指向你的视频详情组件的实际路径
+        component: () => import('@/views/videoIndex/videoInfo/videoDetail'),
+        meta: {
+          title: '视频详情',
+          noCache: true // 详情页通常不需要缓存，确保每次访问都获取最新数据
+        },
+        hidden: true // 详情页本身也不应在任何侧边栏显示
+      },
+    ]
   },
 
   {
@@ -117,7 +135,7 @@ export const constantRoutes = [
         component: () => import('@/views/system/sysMovie/VideoList.vue'),
         meta: { title: '视频数据', icon: 'el-icon-menu' }
       },
-      // --- 新增/修改：详情页面路由，与 list 同级 ---
+      // --- 详情页面路由，与 list 同级 ---
       {
         // 完整路径就是 /log/sysMovie/:id
         path: 'sysMovie/:id',

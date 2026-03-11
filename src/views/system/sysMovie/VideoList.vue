@@ -319,7 +319,7 @@ export default {
     }
   },
   methods: {
-    // --- 新增：跳转详情页 ---
+    // --- ：跳转详情页 ---
     goToDetail(row) {
       // 这里的路径要和你 router/index.js 中配置的一致
       this.$router.push(`/video/sysMovie/${row.id}`);
@@ -367,7 +367,7 @@ export default {
 
     // --- 增删改逻辑 ---
     add() {
-      this.movieRules = this.movieRules; // 使用新增规则（必填）
+      this.movieRules = this.movieRules; // 使用规则（必填）
       this.sysMovie = {}; // 重置表单
       this.dialogVisible = true;
       this.$nextTick(() => {

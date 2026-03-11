@@ -42,3 +42,11 @@ export function resetPassword(data) {
     data
   })
 }
+
+export function registerUser(data) {
+  return request({
+    url: '/admin/system/sysUser/registerUser',
+    method: 'post',
+    data
+  })
+}
