@@ -66,10 +66,21 @@
             </span>
           </div>
           <div class="video-actions">
-            <el-button size="medium" icon="el-icon-thumb" round
-              >点赞 {{ video.likeCount || 0 }}</el-button
+            <el-button
+              size="medium"
+              icon="el-icon-thumb"
+              round
+              @click="likeVideo"
+              >点赞 {{ video ? video.likeCount || 0 : 0 }}</el-button
             >
-            <el-button size="medium" icon="el-icon-share" round>分享</el-button>
+            <!-- 绑定 shareVideo -->
+            <el-button
+              size="medium"
+              icon="el-icon-share"
+              round
+              @click="shareVideo"
+              >分享</el-button
+            >
           </div>
         </div>
 
@@ -98,7 +109,9 @@
               v-model="commentInput"
               class="comment-input"
             ></el-input>
-            <el-button type="primary" class="publish-btn">发布</el-button>
+            <el-button type="primary" class="publish-btn" @click="sendComment"
+              >发布</el-button
+            >
           </div>
 
           <!-- 评论列表 -->
@@ -289,6 +302,33 @@
     ></el-empty>
 
     <el-backtop target="document.body"></el-backtop>
+
+    <el-dialog
+      title="分享视频"
+      :visible.sync="shareDialogVisible"
+      width="300px"
+      center
+    >
+      <div style="text-align: center">
+        <p style="margin-bottom: 15px; color: #666">扫描二维码分享给好友</p>
+        <!-- 这里用一个 div 占位，后续可引入 qrcode 库生成真实二维码 -->
+        <div
+          style="
+            width: 150px;
+            height: 150px;
+            background: #f4f5f7;
+            border: 1px solid #ddd;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+          "
+        >
+          二维码加载中...
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -301,6 +341,7 @@ export default {
   data() {
     return {
       videoId: null,
+      shareDialogVisible: false, // 增加分享弹窗控制
       loading: true,
       video: null,
       processedComments: [],
@@ -396,17 +437,27 @@ export default {
 
     // 点赞视频预留接口
     likeVideo() {
-      // TODO: 调用点赞接口
-      this.$message.success("点赞成功");
-      this.video.likeCount++;
+      if (!this.video) return;
+      this.video.likeCount = (this.video.likeCount || 0) + 1;
+      this.$message.success("视频点赞成功 (演示)");
+    },
+
+    // 视频分享 (调出二维码弹窗)
+    shareVideo() {
+      this.shareDialogVisible = true;
+      this.$message.success("扫码分享给好友吧！");
     },
 
     // ================== 评论区操作 ==================
     // 发表根评论
     sendComment() {
-      if (!this.commentInput.trim()) return;
-      // TODO: 调用后端发表评论接口
-      this.$message.success("评论发表成功");
+      if (!this.commentInput.trim()) {
+        this.$message.warning("评论内容不能为空");
+        return;
+      }
+      // TODO: 调用后端发表根评论接口
+      console.log("模拟发送根评论:", this.commentInput);
+      this.$message.success("评论发表成功 (测试版)");
       this.commentInput = "";
     },
 
@@ -414,11 +465,11 @@ export default {
     likeComment(comment) {
       // TODO: 调用后端评论点赞接口
       comment.likeCount = (comment.likeCount || 0) + 1;
+      this.$message.success("评论点赞成功");
     },
 
     // 展开回复框
     showReplyBox(comment, parentRootId = null) {
-      // 如果再次点击同一个回复按钮，则关闭回复框
       if (this.activeReplyId === comment.id) {
         this.cancelReply();
         return;
@@ -433,25 +484,21 @@ export default {
       this.activeReplyId = null;
       this.replyTargetName = "";
       this.replyContent = "";
+      this.$message.info("已取消回复"); // 增加取消提示
     },
-
-    // 提交回复
+    // 5. 提交回复 (楼中楼)
     submitReply(rootId, targetCommentId = null) {
       if (!this.replyContent.trim()) {
         this.$message.warning("回复内容不能为空");
         return;
       }
-
       // TODO: 调用后端回复接口
-      // 传递参数预留：videoId: this.videoId, rootId: rootId, parentId: targetCommentId || rootId, content: this.replyContent
-      console.log("准备发送回复", {
+      console.log("准备发送回复:", {
         rootId,
         targetCommentId,
         content: this.replyContent,
       });
-
-      this.$message.success("回复成功");
-      this.cancelReply();
+      this.$message.success("回复成功 (测试版)");
     },
     initData() {
       this.loading = true;
@@ -534,26 +581,24 @@ export default {
 
           player.on("ready", () => {
             const playerContainer = document.getElementById("J_prismPlayer");
-
             const togglePlay = (e) => {
-              // 添加一个判断，防止点击播放器内部的控件（如全屏按钮、音量按钮）也触发播放/暂停
-              // 这是一个优化，如果不需要可以忽略此if判断
-              if (e.target.id === "J_prismPlayer") {
-                if (player.getStatus() === "playing") {
-                  player.pause();
-                } else {
-                  player.play();
-                }
+              // 使用 closest 方法判断点击的元素是否在控制栏 (.prism-controlbar) 内部
+              // 如果是控制栏里的按钮（音量、进度条等），就直接 return，不触发暂停/播放
+              if (e.target.closest(".prism-controlbar")) {
+                return;
+              }
+              // 否则执行播放或暂停
+              if (player.getStatus() === "playing") {
+                player.pause();
+              } else {
+                player.play();
               }
             };
-
             if (playerContainer) {
               playerContainer.style.cursor = "pointer";
               playerContainer.addEventListener("click", togglePlay);
-
               // 记住移除事件监听器以防止内存泄漏
-              // 使用一个实例变量来存储 handler，方便后续移除
-              this.playerClickHandler = togglePlay; // 添加这行
+              this.playerClickHandler = togglePlay;
             }
           });
         }
@@ -619,34 +664,6 @@ export default {
       this.commentInput = "";
     },
 
-    // 2. 提交回复（回复某条评论）
-    // rootId: 这条评论所在的最顶层根评论的ID (用于盖楼展示)
-    // targetCommentId: 你直接回复的那条具体评论的ID (如果是回复根评论，这两个ID可能一样)
-    submitReply(rootId, targetCommentId = null) {
-      if (!this.replyContent.trim()) {
-        this.$message.warning("回复内容不能为空");
-        return;
-      }
-
-      const payload = {
-        videoId: this.videoId,
-        content: this.replyContent,
-        rootId: rootId,
-        parentId: targetCommentId || rootId, // 确定具体回复给谁
-      };
-
-      // TODO: 调用后端回复接口
-      // movieApi.replyComment(payload).then(res => {
-      //   this.$message.success("回复成功");
-      //   this.cancelReply(); // 关闭回复框
-      //   this.initData();    // 刷新列表
-      // })
-
-      console.log("模拟发送楼中楼回复:", payload);
-      this.$message.success("回复成功(模拟)");
-      this.cancelReply();
-    },
-
     // 点赞某条评论
     likeComment(comment) {
       // TODO: 调用后端评论点赞接口
@@ -661,24 +678,37 @@ export default {
     shootDanmaku(item) {
       const layer = this.$refs.danmakuLayer;
       if (!layer) return;
-
       const span = document.createElement("span");
       span.innerText = item.content;
       span.style.color = item.color || "#ffffff";
       span.className = "danmaku-item";
-
       // 随机分配一个高度轨道 (距离顶部 10% 到 85% 之间)，防止全部挤在一条线上
       const top = Math.floor(Math.random() * 75) + 10;
       span.style.top = top + "%";
-
       layer.appendChild(span);
-
-      // 弹幕动画默认播放 7 秒，7.5秒后自动从 DOM 中销毁防内存溢出
-      setTimeout(() => {
-        if (layer.contains(span)) {
-          layer.removeChild(span);
+      // --- 修改为精确的动画帧计时器 ---
+      let remainingTime = 7500; // 弹幕总存活时长 (毫秒)
+      let lastTime = performance.now(); // 记录上一次的时间截
+      const checkAndRemove = (currentTime) => {
+        // 如果元素已经被别的地方（比如拖动进度条清屏）移除了，直接退出清理逻辑
+        if (!layer.contains(span)) return;
+        // 计算距离上一帧经过了多少毫秒
+        const deltaTime = currentTime - lastTime;
+        lastTime = currentTime;
+        // 只有在视频正在播放时，才扣减生存时间
+        if (this.isPlaying) {
+          remainingTime -= deltaTime;
         }
-      }, 7500);
+        // 如果生存时间耗尽，则销毁元素
+        if (remainingTime <= 0) {
+          layer.removeChild(span);
+        } else {
+          // 如果还没耗尽，下一帧继续计算
+          requestAnimationFrame(checkAndRemove);
+        }
+      };
+      // 启动计时器
+      requestAnimationFrame(checkAndRemove);
     },
 
     /**
@@ -718,8 +748,11 @@ export default {
     // 跳转分类到主页
     goToCategory(category) {
       if (!category) return;
-      // 携带分类参数跳回主页，具体路径根据你的路由配置决定
-      this.$router.push({ path: "/index", query: { category: category } });
+      // 将分类名称作为查询参数传递
+      this.$router.push({
+        path: "/category", // 修改为目标页面的路由path，例如 /category
+        query: { category: category }, // 将分类信息放在query中
+      });
     },
 
     goToVideoDetail(id) {

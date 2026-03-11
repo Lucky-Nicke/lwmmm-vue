@@ -4,8 +4,10 @@
     <nav class="navbar">
       <div class="nav-left">
         <!-- 点击 Logo 返回门户主页 -->
-        <a href="#" class="logo" @click="goHome">MyBili 📺</a>
-        <div class="nav-categories">
+        <a href="#" class="logo" @click="$router.push('/index')"
+          >影视管理系统 📺</a
+        >
+        <div class="nav-categories" v-if="$route.name !== 'VideoDetail'">
           <span
             v-for="cat in mainCategories"
             :key="cat.id || cat.name"
@@ -200,7 +202,7 @@
       @closed="resetAllForms"
     >
       <div class="auth-header">
-        <div class="auth-logo">MyBili 📺</div>
+        <div class="auth-logo">影视管理系统 📺</div>
         <div class="auth-title">{{ authTitle }}</div>
         <i class="el-icon-close close-icon" @click="authVisible = false"></i>
       </div>
@@ -549,16 +551,6 @@ export default {
         this.$router.push({ name: "VideoDetail", params: { id: videoId } });
       } else {
         this.$message.warning("视频ID缺失，无法跳转！");
-      }
-    },
-    goHome() {
-      // 如果当前不是门户首页，则导航到门户首页
-      if (this.$route.name !== "VideoPortalIndex") {
-        // 使用路由名称判断
-        this.$router.push({ name: "VideoPortalIndex" });
-      } else {
-        // 如果已经在门户首页，可以滚动到顶部
-        window.scrollTo({ top: 0, behavior: "smooth" });
       }
     },
     scrollToTop() {
