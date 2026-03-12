@@ -111,7 +111,7 @@
                 <div class="video-info">
                   <div class="video-title">{{ video.title }}</div>
                   <div class="video-meta">
-                    <span>作者: {{ video.author }}</span>
+                    <span>点赞于: {{ video.time }}</span>
                   </div>
                 </div>
               </div>
@@ -125,44 +125,24 @@
 </template>
 
 <script>
-// 这里可以引入获取用户详情的API，目前使用假数据占位演示
+// 直接通过函数名引入个人信息接口
+import { getLessInfo } from "@/api/user";
+// 通过设置的名字引入用户相关日志接口 (假设导出的对象叫 userApi)
+import userApi from "@/api/user/user";
+
 export default {
   name: "UserCenter",
   data() {
     return {
       activeTab: "profile",
       userInfo: {
-        username: "admin123",
-        nickname: "影视达人",
+        username: "",
+        nickname: "",
         avatar: "",
-        sign: "这是一个超级喜欢看电影的人~",
+        sign: "",
       },
-      // 模拟视频数据
-      historyList: [
-        {
-          id: 1,
-          title: "Vue3从入门到实战",
-          cover:
-            "https://shadow.elemecdn.com/app/element/hamburger.9cf7b091-55e9-11e9-a976-7f4d0b07eef6.png",
-          time: "今天 14:00",
-        },
-        {
-          id: 2,
-          title: "SpringBoot底层原理剖析",
-          cover:
-            "https://shadow.elemecdn.com/app/element/hamburger.9cf7b091-55e9-11e9-a976-7f4d0b07eef6.png",
-          time: "昨天 09:30",
-        },
-      ],
-      likesList: [
-        {
-          id: 3,
-          title: "2024最火的科幻大片混剪",
-          cover:
-            "https://shadow.elemecdn.com/app/element/hamburger.9cf7b091-55e9-11e9-a976-7f4d0b07eef6.png",
-          author: "剪辑大师",
-        },
-      ],
+      historyList: [],
+      likesList: [],
     };
   },
   created() {
@@ -170,6 +150,11 @@ export default {
     if (this.$route.query.tab) {
       this.activeTab = this.$route.query.tab;
     }
+
+    // 初始化加载全部数据
+    this.fetchUserInfo();
+    this.fetchWatchLog();
+    this.fetchLikeLog();
   },
   watch: {
     // 监听路由变化，保证用户在页面内点击顶部下拉菜单也能切换
@@ -184,6 +169,63 @@ export default {
       this.activeTab = tab;
       // 改变 url 参数但不刷新页面
       this.$router.replace({ query: { tab: tab } }).catch((err) => err);
+    },
+
+    // 1. 获取用户信息
+    async fetchUserInfo() {
+      try {
+        // vue-admin-template 通常在 store 里存有 token，或者通过 '@/utils/auth' 的 getToken()
+        const token = this.$store.getters.token;
+        const res = await getLessInfo(token);
+
+        if (res.code === 200 && res.data) {
+          const data = res.data;
+          this.userInfo = {
+            username: data.username,
+            nickname: data.name, // 接口的 name 映射为 nickname
+            avatar: data.avatar,
+            sign: data.desc || '', // 接口的 desc 映射为 sign
+          };
+        }
+      } catch (error) {
+        console.error("获取个人信息失败", error);
+      }
+    },
+
+    // 2. 获取观看记录
+    async fetchWatchLog() {
+      try {
+        const res = await userApi.userWatchLog();
+        // 兼容处理：依据 vue-admin-template 的 axios 拦截器可能直接返回了 data 或者原封的 res
+        let dataList = res.data || res;
+
+        // 如果后端有外层包装 {code: 200, data: [...]}，取 res.data 即可
+        // 这里做个健壮性判断，确保赋值的是数组
+        if (Array.isArray(dataList)) {
+          this.historyList = dataList;
+        } else if (res.code === 200 && Array.isArray(res.data)) {
+          this.historyList = res.data;
+        }
+      } catch (error) {
+        console.error("获取观看记录失败", error);
+      }
+    },
+
+    // 3. 获取点赞列表
+    async fetchLikeLog() {
+      try {
+        const res = await userApi.userLikeLog();
+        // 处理逻辑与观看记录一致
+        let dataList = res.data || res;
+
+        if (Array.isArray(dataList)) {
+          this.likesList = dataList;
+        } else if (res.code === 200 && Array.isArray(res.data)) {
+          this.likesList = res.data;
+        }
+      } catch (error) {
+        console.error("获取点赞列表失败", error);
+      }
     },
   },
 };

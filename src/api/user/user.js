@@ -73,11 +73,26 @@ export default {
         })
     },
 
-    resetPassword(data) {
+    resetPassword() {
         return request({
             url: `${BASE_URL}/changePwd`, // 你的接口地址
             method: 'post',
-            data
         })
-    }
+    },
+
+    // 查询用户观看记录
+    userWatchLog() {
+        return request({
+            url: `${BASE_URL}/userWatchLog`, // 你的接口地址
+            method: 'get',
+        })
+    },
+    
+    // 查询用户点赞列表
+    userLikeLog() {
+        return request({
+            url: `${BASE_URL}/userLikeLog`, // 你的接口地址
+            method: 'get',
+        })
+    },
 }
