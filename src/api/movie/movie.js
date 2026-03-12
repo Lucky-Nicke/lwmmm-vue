@@ -71,5 +71,36 @@ export default {
       url: `${BASE_URL}/getHotWatchVideoInfo`,
       method: 'post'
     })
+  },
+  // 发送弹幕
+  sendDanMu(danmu) {
+    return request({
+      url: `${BASE_URL}/sendDanMu`,
+      method: 'post',
+      data: danmu
+    })
+  },
+  // 返回排行榜视频信息
+  sendLike(like) {
+    return request({
+      url: `${BASE_URL}/sendLike`,
+      method: 'post',
+      data: like
+    })
+  },
+  // 返回排行榜视频信息
+  sendComment(comment) {
+    return request({
+      url: `${BASE_URL}/sendComment`,
+      method: 'post',
+      data: comment
+    })
+  },
+  // 返回视频最新评论
+  getVideoComment(id) {
+    return request({
+      url: `${BASE_URL}/getVideoComment/${id}`,
+      method: 'post',
+    })
   }
 }

@@ -5,13 +5,11 @@
       <div class="left-content">
         <!-- 1. 视频播放区域 (接入阿里云 Aliplayer) -->
         <div class="player-wrapper">
-          <!-- 弹幕层：加入 v-show 控制开关 -->
           <div
             class="danmaku-layer"
             ref="danmakuLayer"
             :class="{ 'is-hidden': !showDanmaku, 'is-paused': !isPlaying }"
           ></div>
-          <!-- 阿里云播放器容器 -->
           <div class="prism-player" id="J_prismPlayer"></div>
         </div>
 
@@ -56,24 +54,21 @@
             <span class="meta-item"
               ><i class="el-icon-time"></i> {{ video.publishTime }}</span
             >
-            <!-- 点击分类返回主页 -->
-            <span
-              class="meta-item tag"
-              @click="goToCategory(video.category)"
-              title="点击查看该分类更多视频"
-            >
-              {{ video.category || "默认分类" }}
-            </span>
+            <span class="meta-item tag" title="点击查看该分类更多视频">{{
+              video.category || "默认分类"
+            }}</span>
           </div>
           <div class="video-actions">
             <el-button
               size="medium"
+              :type="video && video.liked === true ? 'primary' : ''"
               icon="el-icon-thumb"
               round
               @click="likeVideo"
-              >点赞 {{ video ? video.likeCount || 0 : 0 }}</el-button
             >
-            <!-- 绑定 shareVideo -->
+              {{ video && video.liked ? "已点赞" : "点赞" }}
+              {{ video ? video.likeCount || 0 : 0 }}
+            </el-button>
             <el-button
               size="medium"
               icon="el-icon-share"
@@ -94,9 +89,7 @@
             </h3>
           </div>
 
-          <!-- 发布评论框 -->
           <div class="comment-publish">
-            <!-- 未登录显示默认头像，登录显示用户头像 -->
             <el-avatar
               :src="currentUserAvatar"
               icon="el-icon-user-solid"
@@ -114,32 +107,32 @@
             >
           </div>
 
-          <!-- 评论列表 -->
           <div class="comment-list">
             <div
               class="comment-item"
               v-for="rootComment in processedComments"
               :key="rootComment.id"
             >
-              <!-- 根评论头像 -->
               <el-avatar
                 :src="rootComment.avatar"
                 class="comment-avatar"
               ></el-avatar>
 
               <div class="comment-content-wrap">
-                <!-- 根评论内容 -->
                 <div class="comment-user">
                   {{ (rootComment.userId || "").replace("用户:", "用户") }}
                 </div>
                 <div class="comment-text">{{ rootComment.content }}</div>
                 <div class="comment-info">
                   <span class="time">{{ rootComment.createTime }}</span>
-                  <!-- 绑定点赞和回复事件 -->
-                  <span class="action" @click="likeComment(rootComment)"
-                    ><i class="el-icon-thumb"></i>
-                    {{ rootComment.likeCount || 0 }}</span
+                  <span
+                    class="action"
+                    :class="{ 'is-active': rootComment.liked }"
+                    @click="likeComment(rootComment)"
                   >
+                    <i class="el-icon-thumb"></i>
+                    {{ rootComment.likeCount || 0 }}
+                  </span>
                   <span
                     class="action reply-btn"
                     @click="showReplyBox(rootComment)"
@@ -147,7 +140,6 @@
                   >
                 </div>
 
-                <!-- 根评论的回复框 -->
                 <div
                   class="reply-box-container"
                   v-if="activeReplyId === rootComment.id"
@@ -169,7 +161,6 @@
                   </div>
                 </div>
 
-                <!-- 子评论列表 (支持多层级缩进) -->
                 <div
                   class="sub-comment-list"
                   v-if="
@@ -204,11 +195,14 @@
                       <span class="sub-text">{{ child.content }}</span>
                       <div class="sub-info">
                         <span class="time">{{ child.createTime }}</span>
-                        <!-- 绑定点赞和回复事件 -->
-                        <span class="action" @click="likeComment(child)"
-                          ><i class="el-icon-thumb"></i>
-                          {{ child.likeCount || 0 }}</span
+                        <span
+                          class="action"
+                          :class="{ 'is-active': child.liked }"
+                          @click="likeComment(child)"
                         >
+                          <i class="el-icon-thumb"></i>
+                          {{ child.likeCount || 0 }}
+                        </span>
                         <span
                           class="action reply-btn"
                           @click="showReplyBox(child, rootComment.id)"
@@ -216,7 +210,6 @@
                         >
                       </div>
 
-                      <!-- 子评论的回复框 -->
                       <div
                         class="reply-box-container"
                         v-if="activeReplyId === child.id"
@@ -250,14 +243,10 @@
 
       <!-- ================= 右侧：推荐视频 ================= -->
       <div class="right-sidebar">
-        <!-- 预留的UP主卡片（极简版） -->
         <div class="up-info-card">
           <el-avatar :src="video.creatorAvatar" :size="45"></el-avatar>
           <div class="up-detail">
-            <!-- 后期如果有数据，可以替换为 video.authorName -->
-            <div class="up-name">
-              {{ video.creator }}
-            </div>
+            <div class="up-name">{{ video.creator }}</div>
           </div>
         </div>
 
@@ -271,16 +260,12 @@
               @click="goToVideoDetail(item.id)"
             >
               <div class="rec-cover">
-                <!-- 修改为使用接口新字段 coverUrl -->
                 <img :src="item.coverUrl" alt="cover" />
-                <!-- <span class="duration">03:24</span> 如果没有时长字段，可以暂时隐掉 -->
               </div>
               <div class="rec-info">
-                <!-- 修改为使用接口新字段 title -->
                 <div class="rec-title" :title="item.title">
                   {{ item.title }}
                 </div>
-                <!-- 修改为使用接口新字段 author -->
                 <div class="rec-up">{{ item.author || "未知UP主" }}</div>
                 <div class="rec-stats">
                   <span
@@ -295,12 +280,10 @@
       </div>
     </div>
 
-    <!-- 视频加载失败时的空状态 -->
     <el-empty
       v-else-if="!loading"
       description="视频不见了或加载失败"
     ></el-empty>
-
     <el-backtop target="document.body"></el-backtop>
 
     <el-dialog
@@ -311,7 +294,6 @@
     >
       <div style="text-align: center">
         <p style="margin-bottom: 15px; color: #666">扫描二维码分享给好友</p>
-        <!-- 这里用一个 div 占位，后续可引入 qrcode 库生成真实二维码 -->
         <div
           style="
             width: 150px;
@@ -335,64 +317,59 @@
 <script>
 import { getMovieDetail } from "@/api/date/date.js";
 import movieApi from "@/api/movie/movie.js";
+import { getLessInfo } from "@/api/user.js";
+import { getToken } from "@/utils/auth";
 
 export default {
   name: "VideoDetail",
   data() {
     return {
+      remoteUserId: null,
       videoId: null,
-      shareDialogVisible: false, // 增加分享弹窗控制
+      shareDialogVisible: false,
       loading: true,
       video: null,
       processedComments: [],
       hotVideos: [],
       commentInput: "",
-      player: null, // 阿里云播放器实例
-      isPlaying: false, // 当前是否正在播放
-      sortedDanmakuList: [], // 按时间排序后的弹幕列表
-      danmakuIndex: 0, // 当前播放到的弹幕索引
-      // 弹幕控制
+      player: null,
+      isPlaying: false,
+      sortedDanmakuList: [],
+      danmakuIndex: 0,
       showDanmaku: true,
       danmakuInput: "",
-
-      // 评论回复控制
-      activeReplyId: null, // 当前正在回复的评论ID
-      replyTargetName: "", // 正在回复的用户名字
-      replyContent: "", // 回复框的内容
+      activeReplyId: null,
+      replyTargetName: "",
+      replyContent: "",
+      replyTargetUserId: null,
     };
   },
   computed: {
-    // 动态获取当前登录用户的头像
+    isLogin() {
+      const hasToken = this.$store.getters.token || getToken();
+      return !!hasToken;
+    },
     currentUserAvatar() {
-      // 假设你的登录信息存在 localStorage 中，你可以根据实际情况修改从 Vuex 获取
       const userInfoStr = localStorage.getItem("userInfo");
       if (userInfoStr) {
         try {
           const userInfo = JSON.parse(userInfoStr);
-          if (userInfo && userInfo.avatar) {
-            return userInfo.avatar;
-          }
+          if (userInfo && userInfo.avatar) return userInfo.avatar;
         } catch (e) {}
       }
-      // 如果未登录或没有头像，返回默认的灰色占位图
       return "https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png";
+    },
+    currentUserId() {
+      return this.$store.getters.id || this.remoteUserId || null;
     },
   },
   created() {
+    this.fetchUserInfo();
     this.videoId = this.$route.params.id;
     this.initData();
   },
   beforeDestroy() {
-    // 离开页面时销毁播放器，防止内存泄漏
     if (this.player) {
-      if (this.playerClickHandler) {
-        const playerContainer = document.getElementById("J_prismPlayer");
-        if (playerContainer) {
-          playerContainer.removeEventListener("click", this.playerClickHandler);
-        }
-        this.playerClickHandler = null;
-      }
-
       this.player.dispose();
       this.player = null;
     }
@@ -407,102 +384,225 @@ export default {
     },
   },
   methods: {
-    // 发送弹幕
+    fetchUserInfo() {
+      const token = getToken();
+      if (token) {
+        getLessInfo(token).then((res) => {
+          if (res.code === 200 && res.data) {
+            this.remoteUserId = res.data.id;
+          }
+        });
+      }
+    },
     sendDanmaku() {
       if (!this.danmakuInput.trim()) return;
       if (!this.player) {
         this.$message.warning("视频未加载，无法发送弹幕");
         return;
       }
+      if (!this.isLogin) {
+        this.$message.warning("请先登录");
+        return;
+      }
 
       const currentTime = this.player.getCurrentTime();
-      const newDanmaku = {
-        content: this.danmakuInput,
-        playTime: currentTime,
-        color: "#00a1d6", // 自己发的弹幕默认给个专属色
+      const content = this.danmakuInput;
+
+      const danmuPayload = {
+        videoId: this.videoId,
+        userId: this.currentUserId,
+        content: content,
+        time: currentTime,
       };
 
-      // 1. 立即在屏幕上发射出来
-      this.shootDanmaku(newDanmaku);
-      // 2. 存入弹幕列表以便拖动进度条时还能看到
-      this.sortedDanmakuList.push(newDanmaku);
-      this.sortedDanmakuList.sort((a, b) => a.playTime - b.playTime);
-
-      // TODO: 在这里调用后端接口把弹幕存入数据库
-      // movieApi.addDanmaku({ videoId: this.videoId, ...newDanmaku }).then(...)
-
-      this.$message.success("弹幕发送成功");
-      this.danmakuInput = "";
+      movieApi
+        .sendDanMu(danmuPayload)
+        .then((res) => {
+          if (res.code === 200) {
+            const newDanmaku = {
+              content: content,
+              playTime: currentTime,
+              color: "#00a1d6",
+            };
+            this.shootDanmaku(newDanmaku);
+            this.sortedDanmakuList.push(newDanmaku);
+            this.sortedDanmakuList.sort((a, b) => a.playTime - b.playTime);
+            this.$message.success("弹幕发送成功");
+            this.danmakuInput = "";
+          }
+        })
+        .catch((err) => console.error(err));
     },
 
-    // 点赞视频预留接口
     likeVideo() {
       if (!this.video) return;
-      this.video.likeCount = (this.video.likeCount || 0) + 1;
-      this.$message.success("视频点赞成功 (演示)");
+      if (!this.$store.getters.token) {
+        this.$message.warning("请先登录");
+        return;
+      }
+      const isCurrentlyLiked = !!this.video.liked;
+      const targetAction = !isCurrentlyLiked;
+      const likePayload = {
+        videoId: this.videoId,
+        userId: this.currentUserId,
+        likeType: "video",
+        like: targetAction,
+      };
+      movieApi.sendLike(likePayload).then((res) => {
+        if (res.code === 200) {
+          const message = res.data || res.msg;
+          if (message === "点赞成功") {
+            if (!isCurrentlyLiked)
+              this.video.likeCount = (this.video.likeCount || 0) + 1;
+            this.$set(this.video, "liked", true);
+            this.$message.success(message);
+          } else if (message === "已经点过赞了") {
+            this.$set(this.video, "liked", true);
+            this.$message.info(message);
+          } else if (message === "取消点赞成功") {
+            if (isCurrentlyLiked)
+              this.video.likeCount = Math.max(
+                0,
+                (this.video.likeCount || 0) - 1
+              );
+            this.$set(this.video, "liked", false);
+            this.$message.success(message);
+          }
+        } else {
+          this.$message.error(res.msg || "操作失败");
+        }
+      });
     },
 
-    // 视频分享 (调出二维码弹窗)
     shareVideo() {
       this.shareDialogVisible = true;
-      this.$message.success("扫码分享给好友吧！");
     },
 
-    // ================== 评论区操作 ==================
-    // 发表根评论
     sendComment() {
       if (!this.commentInput.trim()) {
         this.$message.warning("评论内容不能为空");
         return;
       }
-      // TODO: 调用后端发表根评论接口
-      console.log("模拟发送根评论:", this.commentInput);
-      this.$message.success("评论发表成功 (测试版)");
-      this.commentInput = "";
+      if (!this.isLogin) {
+        this.$message.warning("请先登录");
+        return;
+      }
+
+      const commentPayload = {
+        videoId: this.videoId,
+        userId: this.currentUserId,
+        toUserId: null,
+        commentRootId: null,
+        parentId: null,
+        toSendCommentId: null,
+        content: this.commentInput,
+      };
+
+      movieApi.sendComment(commentPayload).then((res) => {
+        if (res.code === 200) {
+          this.$message.success("评论发表成功");
+          this.commentInput = "";
+          this.initData();
+        } else {
+          this.$message.error(res.msg || "发表失败");
+        }
+      });
     },
 
-    // 点赞某条评论
     likeComment(comment) {
-      // TODO: 调用后端评论点赞接口
-      comment.likeCount = (comment.likeCount || 0) + 1;
-      this.$message.success("评论点赞成功");
+      if (!this.$store.getters.token) {
+        this.$message.warning("请先登录");
+        return;
+      }
+      const isCurrentlyLiked = !!comment.liked;
+      const targetAction = !isCurrentlyLiked;
+      const likePayload = {
+        videoId: this.videoId,
+        userId: this.currentUserId,
+        commentId: comment.id,
+        likeType: "comment",
+        like: targetAction,
+      };
+      movieApi.sendLike(likePayload).then((res) => {
+        if (res.code === 200) {
+          const message = res.data || res.msg;
+          if (message === "点赞成功") {
+            if (!isCurrentlyLiked)
+              comment.likeCount = (comment.likeCount || 0) + 1;
+            this.$set(comment, "liked", true);
+            this.$message.success(message);
+          } else if (message === "已经点过赞了") {
+            this.$set(comment, "liked", true);
+            this.$message.info(message);
+          } else if (message === "取消点赞成功") {
+            if (isCurrentlyLiked)
+              comment.likeCount = Math.max(0, (comment.likeCount || 0) - 1);
+            this.$set(comment, "liked", false);
+            this.$message.success(message);
+          }
+        } else {
+          this.$message.error(res.msg || "操作失败");
+        }
+      });
     },
 
-    // 展开回复框
-    showReplyBox(comment, parentRootId = null) {
+    showReplyBox(comment) {
       if (this.activeReplyId === comment.id) {
         this.cancelReply();
         return;
       }
       this.activeReplyId = comment.id;
-      this.replyTargetName = (comment.userId || "").replace("用户:", "用户");
+      const rawId = comment.userId || "";
+      this.replyTargetName = rawId.replace("用户:", ""); // 赋值给 placeholder 显示
+      this.replyTargetUserId = rawId.includes(":")
+        ? rawId.split(":")[1]
+        : rawId;
       this.replyContent = "";
     },
 
-    // 取消回复
     cancelReply() {
       this.activeReplyId = null;
       this.replyTargetName = "";
+      this.replyTargetUserId = null;
       this.replyContent = "";
-      this.$message.info("已取消回复"); // 增加取消提示
     },
-    // 5. 提交回复 (楼中楼)
+
     submitReply(rootId, targetCommentId = null) {
       if (!this.replyContent.trim()) {
         this.$message.warning("回复内容不能为空");
         return;
       }
-      // TODO: 调用后端回复接口
-      console.log("准备发送回复:", {
-        rootId,
-        targetCommentId,
+      if (!this.isLogin) {
+        this.$message.warning("请先登录");
+        return;
+      }
+
+      const parentId = targetCommentId ? targetCommentId : rootId;
+
+      const commentPayload = {
+        videoId: this.videoId,
+        rootId: rootId,
+        parentId: parentId,
+        userId: this.currentUserId,
+        toUserId: this.replyTargetUserId,
+        commentRootId: rootId,
+        toSendCommentId: targetCommentId,
         content: this.replyContent,
+      };
+
+      movieApi.sendComment(commentPayload).then((res) => {
+        if (res.code === 200) {
+          this.$message.success("回复成功");
+          this.cancelReply();
+          this.initData();
+        } else {
+          this.$message.error(res.msg || "回复失败");
+        }
       });
-      this.$message.success("回复成功 (测试版)");
     },
+
     initData() {
       this.loading = true;
-
       Promise.all([getMovieDetail(this.videoId), movieApi.getHotVideoInfo()])
         .then(([detailRes, hotRes]) => {
           const vData = detailRes.data ? detailRes.data : detailRes;
@@ -514,23 +614,17 @@ export default {
             vData.name
           ) {
             this.video = vData;
-
-            // 新增：初始化弹幕并按 playTime (秒) 从小到大排序
-            if (this.video.danmakuList && this.video.danmakuList.length > 0) {
-              this.sortedDanmakuList = [...this.video.danmakuList].sort(
-                (a, b) => a.playTime - b.playTime
-              );
-            } else {
-              this.sortedDanmakuList = [];
-            }
+            this.sortedDanmakuList =
+              this.video.danmakuList?.length > 0
+                ? [...this.video.danmakuList].sort(
+                    (a, b) => a.playTime - b.playTime
+                  )
+                : [];
             this.danmakuIndex = 0;
-
             this.processedComments = this.formatComments(
               this.video.commentList || []
             );
-            this.$nextTick(() => {
-              this.initAliPlayer();
-            });
+            this.$nextTick(() => this.initAliPlayer());
           } else {
             this.$message.error("获取视频详情失败");
           }
@@ -538,17 +632,14 @@ export default {
           if ((hotRes.code === 200 && hotRes.data) || Array.isArray(hData)) {
             this.hotVideos = hData;
           }
-
           this.loading = false;
         })
         .catch((err) => {
           console.error("加载异常:", err);
-          this.$message.error("加载异常");
           this.loading = false;
         });
     },
 
-    // 阿里云播放器初始化
     initAliPlayer() {
       if (this.player) {
         this.player.dispose();
@@ -558,64 +649,28 @@ export default {
 
       const playInfo = this.video.playId || {};
 
-      this.player = new window.Aliplayer(
-        {
-          id: "J_prismPlayer",
-          vid: playInfo.playId,
-          playauth: playInfo.playAuth,
-          cover: playInfo.image || this.video.image,
-          width: "100%",
-          height: "100%",
-          autoplay: false,
-          playsinline: true,
-          preload: true,
-          controlBarVisibility: "hover",
-          useH5Prism: true,
-          license: {
-            domain: "lucky-nicke-movie.oss-cn-shenzhen.aliyuncs.com",
-            key: "xPfu7NfoGscF2Fycvf1255184446947d1afdf46e27fef31bc",
-          },
+      this.player = new window.Aliplayer({
+        id: "J_prismPlayer",
+        vid: playInfo.playId,
+        playauth: playInfo.playAuth,
+        cover: playInfo.image || this.video.image,
+        width: "100%",
+        height: "100%",
+        autoplay: false,
+        playsinline: true,
+        preload: true,
+        controlBarVisibility: "hover",
+        useH5Prism: true,
+        license: {
+          domain: "lucky-nicke-movie.oss-cn-shenzhen.aliyuncs.com",
+          key: "xPfu7NfoGscF2Fycvf1255184446947d1afdf46e27fef31bc",
         },
-        (player) => {
-          console.log("阿里云播放器初始化成功!");
-
-          player.on("ready", () => {
-            const playerContainer = document.getElementById("J_prismPlayer");
-            const togglePlay = (e) => {
-              // 使用 closest 方法判断点击的元素是否在控制栏 (.prism-controlbar) 内部
-              // 如果是控制栏里的按钮（音量、进度条等），就直接 return，不触发暂停/播放
-              if (e.target.closest(".prism-controlbar")) {
-                return;
-              }
-              // 否则执行播放或暂停
-              if (player.getStatus() === "playing") {
-                player.pause();
-              } else {
-                player.play();
-              }
-            };
-            if (playerContainer) {
-              playerContainer.style.cursor = "pointer";
-              playerContainer.addEventListener("click", togglePlay);
-              // 记住移除事件监听器以防止内存泄漏
-              this.playerClickHandler = togglePlay;
-            }
-          });
-        }
-      );
-
-      // 绑定播放器事件来控制弹幕
-      this.player.on("play", () => {
-        this.isPlaying = true;
-      });
-      this.player.on("pause", () => {
-        this.isPlaying = false;
       });
 
-      // 时间更新时，发射弹幕
+      this.player.on("play", () => (this.isPlaying = true));
+      this.player.on("pause", () => (this.isPlaying = false));
       this.player.on("timeupdate", () => {
         const currentTime = this.player.getCurrentTime();
-        // 如果当前时间大于等于下一条弹幕的 playTime，则发射该弹幕，索引+1
         while (
           this.danmakuIndex < this.sortedDanmakuList.length &&
           this.sortedDanmakuList[this.danmakuIndex].playTime <= currentTime
@@ -625,56 +680,17 @@ export default {
         }
       });
 
-      // 用户拖动进度条时，重新计算弹幕索引，并清空当前屏幕弹幕
       this.player.on("seeked", () => {
         const currentTime = this.player.getCurrentTime();
-        if (this.$refs.danmakuLayer) this.$refs.danmakuLayer.innerHTML = ""; // 清屏
-
-        // 找到第一个大于当前时间的弹幕索引
+        if (this.$refs.danmakuLayer) this.$refs.danmakuLayer.innerHTML = "";
         this.danmakuIndex = this.sortedDanmakuList.findIndex(
           (d) => d.playTime >= currentTime
         );
-        if (this.danmakuIndex === -1) {
+        if (this.danmakuIndex === -1)
           this.danmakuIndex = this.sortedDanmakuList.length;
-        }
       });
     },
 
-    sendComment() {
-      if (!this.commentInput.trim()) {
-        this.$message.warning("评论内容不能为空");
-        return;
-      }
-
-      const payload = {
-        videoId: this.videoId,
-        content: this.commentInput,
-        // 如果后端需要，可以传 parentId: null 或者 0
-      };
-
-      // TODO: 调用后端发表根评论接口
-      // movieApi.addComment(payload).then(res => {
-      //   this.$message.success("评论发表成功");
-      //   this.commentInput = "";
-      //   this.initData(); // 重新拉取一次数据刷新评论列表
-      // })
-
-      console.log("模拟发送根评论:", payload);
-      this.$message.success("评论发表成功(模拟)");
-      this.commentInput = "";
-    },
-
-    // 点赞某条评论
-    likeComment(comment) {
-      // TODO: 调用后端评论点赞接口
-      // movieApi.likeComment(comment.id).then(...)
-
-      // 前端表现层先+1，让用户感觉反应很快
-      comment.likeCount = (comment.likeCount || 0) + 1;
-      this.$message.success("点赞成功");
-    },
-
-    // 动态发射弹幕到页面
     shootDanmaku(item) {
       const layer = this.$refs.danmakuLayer;
       if (!layer) return;
@@ -682,93 +698,80 @@ export default {
       span.innerText = item.content;
       span.style.color = item.color || "#ffffff";
       span.className = "danmaku-item";
-      // 随机分配一个高度轨道 (距离顶部 10% 到 85% 之间)，防止全部挤在一条线上
-      const top = Math.floor(Math.random() * 75) + 10;
-      span.style.top = top + "%";
+      span.style.top = Math.floor(Math.random() * 75) + 10 + "%";
       layer.appendChild(span);
-      // --- 修改为精确的动画帧计时器 ---
-      let remainingTime = 7500; // 弹幕总存活时长 (毫秒)
-      let lastTime = performance.now(); // 记录上一次的时间截
+
+      let remainingTime = 7500;
+      let lastTime = performance.now();
       const checkAndRemove = (currentTime) => {
-        // 如果元素已经被别的地方（比如拖动进度条清屏）移除了，直接退出清理逻辑
         if (!layer.contains(span)) return;
-        // 计算距离上一帧经过了多少毫秒
         const deltaTime = currentTime - lastTime;
         lastTime = currentTime;
-        // 只有在视频正在播放时，才扣减生存时间
-        if (this.isPlaying) {
-          remainingTime -= deltaTime;
-        }
-        // 如果生存时间耗尽，则销毁元素
+        if (this.isPlaying) remainingTime -= deltaTime;
         if (remainingTime <= 0) {
           layer.removeChild(span);
         } else {
-          // 如果还没耗尽，下一帧继续计算
           requestAnimationFrame(checkAndRemove);
         }
       };
-      // 启动计时器
       requestAnimationFrame(checkAndRemove);
     },
 
-    /**
-     * 将嵌套的树形评论结构，转换为带有缩进深度的两层结构
-     */
     formatComments(commentList) {
       if (!commentList || !Array.isArray(commentList)) return [];
-
       return commentList.map((root) => {
         const flatChildren = [];
-        // depth: 层级深度。 1表示第一层子评论，2表示第二层子评论...
         const extractChildren = (childrenArray, depth = 1) => {
           if (!childrenArray || childrenArray.length === 0) return;
           childrenArray.forEach((child) => {
-            // 第1层不缩进，从第2层(即整体的第3层)开始缩进30px，最大缩进120px防破版
             const indent = depth > 1 ? Math.min((depth - 1) * 30, 120) : 0;
             flatChildren.push({ ...child, depth, indent });
-
-            if (child.children && child.children.length > 0) {
+            if (child.children?.length > 0)
               extractChildren(child.children, depth + 1);
-            }
           });
         };
-
         extractChildren(root.children);
-        flatChildren.sort(
-          (a, b) => new Date(a.createTime) - new Date(b.createTime)
-        );
-
-        return {
-          ...root,
-          flatChildren: flatChildren,
-        };
-      });
-    },
-
-    // 跳转分类到主页
-    goToCategory(category) {
-      if (!category) return;
-      // 将分类名称作为查询参数传递
-      this.$router.push({
-        path: "/category", // 修改为目标页面的路由path，例如 /category
-        query: { category: category }, // 将分类信息放在query中
+        return { ...root, flatChildren };
       });
     },
 
     goToVideoDetail(id) {
       if (!id) return;
-      this.$router.push({ name: "VideoDetail", params: { id: id } });
+      this.$router.push({ name: "VideoDetail", params: { id } });
     },
   },
 };
 </script>
 
 <style lang="scss" scoped>
-.danmaku-layer.is-hidden {
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.3s;
+.action.is-active {
+  color: #00a1d6 !important;
+  font-weight: bold;
 }
+.action.is-active i {
+  color: #00a1d6;
+}
+
+.danmaku-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 40px;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 10;
+  transition: opacity 0.3s;
+
+  &.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+  }
+  &.is-paused ::v-deep .danmaku-item {
+    animation-play-state: paused !important;
+  }
+}
+
 /* ================= 弹幕发送栏样式 ================= */
 .danmaku-send-bar {
   display: flex;
@@ -824,45 +827,28 @@ export default {
     transform: translateY(0);
   }
 }
-/* ================= 动态弹幕系统样式 ================= */
-.danmaku-layer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 50px; /* bottom 留出控制条位置 */
-  pointer-events: none; /* 让点击事件穿透到下方的视频播放器 */
-  overflow: hidden;
-  z-index: 10;
-}
 
-/* 视频暂停时，暂停所有弹幕的 CSS 动画 */
-.danmaku-layer.is-paused ::v-deep .danmaku-item {
-  animation-play-state: paused !important;
-}
-
-/* 动态插入的弹幕样式 (使用 ::v-deep 穿透 scoped) */
 ::v-deep .danmaku-item {
   position: absolute;
   right: 0;
+  pointer-events: none;
   white-space: nowrap;
   font-size: 20px;
   font-weight: 500;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8); /* 增加黑边，防止白色背景看不清 */
-  transform: translateX(100%); /* 初始在屏幕右侧外部 */
-  /* 飞行时间 7秒，匀速 */
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  transform: translateX(100%);
   animation: danmakuMove 15s linear forwards;
 }
 
-/* 弹幕从右往左飞的动画 */
 @keyframes danmakuMove {
   0% {
     transform: translateX(100%);
   }
   100% {
     transform: translateX(-150vw);
-  } /* 飞出左侧屏幕 */
+  }
 }
+
 .video-detail-root {
   max-width: 1300px;
   margin: 0 auto;
@@ -876,13 +862,11 @@ export default {
   align-items: flex-start;
 }
 
-/* ================= 左侧主体 ================= */
 .left-content {
   flex: 1;
   min-width: 0;
 }
 
-/* 播放器区域 */
 .player-wrapper {
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -892,25 +876,12 @@ export default {
   position: relative;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 
-  /* 保证阿里云播放器铺满 */
   .prism-player {
     width: 100%;
     height: 100%;
   }
-
-  .danmaku-layer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 40px;
-    pointer-events: none;
-    overflow: hidden;
-    z-index: 10; /* 盖在播放器上层 */
-  }
 }
 
-/* 视频信息 */
 .video-info {
   margin-top: 20px;
 
@@ -940,7 +911,6 @@ export default {
       color: #61666d;
       cursor: pointer;
       transition: all 0.2s;
-
       &:hover {
         background-color: #e3e5e7;
         color: #00a1d6;
@@ -956,7 +926,6 @@ export default {
   }
 }
 
-/* 评论区 */
 .comment-section {
   .comment-header {
     margin-bottom: 20px;
@@ -1003,7 +972,6 @@ export default {
 
     .comment-content-wrap {
       flex: 1;
-
       .comment-user {
         font-size: 13px;
         color: #fb7299;
@@ -1023,7 +991,6 @@ export default {
         display: flex;
         gap: 15px;
         align-items: center;
-
         .action {
           cursor: pointer;
           &:hover {
@@ -1032,7 +999,6 @@ export default {
         }
       }
 
-      /* 二级子评论区域 */
       .sub-comment-list {
         margin-top: 10px;
         background-color: #f8f9fa;
@@ -1043,7 +1009,6 @@ export default {
           display: flex;
           gap: 10px;
           margin-bottom: 10px;
-          /* 过渡动画使缩进效果更平滑 */
           transition: margin-left 0.3s ease;
 
           &:last-child {
@@ -1054,7 +1019,6 @@ export default {
             flex: 1;
             font-size: 14px;
             line-height: 1.5;
-
             .sub-user {
               color: #61666d;
               font-weight: 500;
@@ -1067,7 +1031,6 @@ export default {
             .sub-text {
               color: #18191c;
             }
-
             .sub-info {
               margin-top: 4px;
               font-size: 12px;
@@ -1088,13 +1051,11 @@ export default {
   }
 }
 
-/* ================= 右侧主体 ================= */
 .right-sidebar {
   width: 350px;
   flex-shrink: 0;
 }
 
-/* 极简 UP主信息卡片 */
 .up-info-card {
   display: flex;
   align-items: center;
@@ -1115,7 +1076,6 @@ export default {
   }
 }
 
-/* 推荐视频列表 */
 .recommend-section {
   .recommend-title {
     font-size: 16px;
@@ -1123,48 +1083,41 @@ export default {
     margin-bottom: 15px;
     color: #18191c;
   }
-
   .recommend-list {
     display: flex;
     flex-direction: column;
     gap: 12px;
   }
-
   .recommend-item {
     display: flex;
     gap: 10px;
     cursor: pointer;
     border-radius: 4px;
     transition: background-color 0.2s;
-
     &:hover {
       background-color: #f1f2f3;
       .rec-title {
         color: #00a1d6;
       }
     }
-
     .rec-cover {
       width: 140px;
       height: 80px;
       border-radius: 6px;
       overflow: hidden;
       flex-shrink: 0;
-
       img {
         width: 100%;
         height: 100%;
         object-fit: cover;
       }
     }
-
     .rec-info {
       flex: 1;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       overflow: hidden;
-
       .rec-title {
         font-size: 14px;
         color: #18191c;
