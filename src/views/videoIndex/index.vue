@@ -79,10 +79,9 @@
         <button class="post-btn">投稿</button>
       </div>
     </nav>
+
     <!-- 主体内容区容器，包含门户主页或视频详情页 -->
-    <!-- 根据路由名称条件渲染，如果是视频详情页，则渲染 router-view -->
     <router-view v-if="$route.name === 'VideoDetail'"></router-view>
-    <!-- 否则，渲染门户主页内容 -->
     <template v-else>
       <div class="container">
         <main class="main-content">
@@ -190,7 +189,7 @@
         </div>
       </div>
     </template>
-    <!-- /template v-else -->
+
     <!-- ===== 综合鉴权弹窗 (登录/注册/忘记密码) ===== -->
     <el-dialog
       :visible.sync="authVisible"
@@ -251,8 +250,9 @@
                   class="submit-btn login-btn-color"
                   :loading="loading"
                   @click="handleLoginSubmit"
-                  >登 录</el-button
                 >
+                  登 录
+                </el-button>
               </el-form-item>
             </el-form>
           </div>
@@ -390,10 +390,8 @@
 
 <script>
 import categoryApi from "@/api/category/category";
-import { setToken, removeToken } from "@/utils/auth";
+import { setToken, removeToken, getToken } from "@/utils/auth";
 import movieApi from "@/api/movie/movie";
-
-// 导入 registerUser 接口
 import {
   login,
   logout,
@@ -401,6 +399,7 @@ import {
   getInfo,
   registerUser,
 } from "@/api/user";
+
 export default {
   name: "PortalPage",
   data() {
@@ -506,6 +505,7 @@ export default {
     };
   },
   created() {
+    this.checkLoginStatus();
     this.getCategoryList();
     this.fetchVideos();
     this.fetchHotVideos();
@@ -534,9 +534,7 @@ export default {
       return this.categories.length > this.initialCategoryDisplayLimit;
     },
     overflowCategories() {
-      if (!this.hasOverflowCategories) {
-        return [];
-      }
+      if (!this.hasOverflowCategories) return [];
       const otherCategories = this.categories.filter(
         (cat) => cat.name !== "首页"
       );
@@ -544,10 +542,30 @@ export default {
     },
   },
   methods: {
-    // 视频详情页跳转方法
+    checkLoginStatus() {
+      const token = getToken();
+      if (token) {
+        // 如果 cookie 中有 token，说明可能处于登录状态，去拉取用户信息验证一下
+        getInfo(token)
+          .then((res) => {
+            if (res.code === 200 && res.data) {
+              this.userInfo.avatar = res.data.avatar;
+              this.isLogin = true; // 恢复登录状态
+            } else {
+              // 获取失败说明 token 可能过期了，清除废弃 token
+              removeToken();
+              this.isLogin = false;
+            }
+          })
+          .catch(() => {
+            // 请求异常也当做未登录处理
+            removeToken();
+            this.isLogin = false;
+          });
+      }
+    },
     goToVideoDetail(videoId) {
       if (videoId) {
-        // 使用命名路由跳转到当前路由的子路由VideoDetail
         this.$router.push({ name: "VideoDetail", params: { id: videoId } });
       } else {
         this.$message.warning("视频ID缺失，无法跳转！");
@@ -559,24 +577,22 @@ export default {
     openAI() {
       this.$message.success("AI 助手模块预留点击事件");
     },
-    // 获取排行榜视频的方法
     fetchRankVideos() {
       this.rankLoading = true;
       movieApi
         .getHotWatchVideoInfo()
         .then((res) => {
           if (res.code === 200 && res.data) {
-            // 将数据直接赋值给 rankList，包含 id, title, author, views, coverUrl, category
             this.rankList = res.data;
           } else {
             this.$message.error(res.message || "获取排行榜失败！");
-            this.rankList = []; // 获取失败时清空列表
+            this.rankList = [];
           }
         })
         .catch((error) => {
           this.$message.error("加载排行榜失败，请稍后重试！");
           console.error("Error fetching rank videos:", error);
-          this.rankList = []; // 发生错误时清空列表
+          this.rankList = [];
         })
         .finally(() => {
           this.rankLoading = false;
@@ -594,7 +610,7 @@ export default {
               views: item.playCount || item.views,
               id: item.videoId || item.id,
               cover: item.coverUrl || "",
-              category: item.category, // 如果需要，也可以包含分类信息
+              category: item.category,
             }));
           } else {
             this.$message.error(res.message || "获取热门视频失败！");
@@ -608,7 +624,6 @@ export default {
           this.hotVideoLoading = false;
         });
     },
-    // 【修复点】这里删除了下面重复定义的 filterVideos 方法，保留这一个即可
     filterVideos() {
       if (this.activeCategory === "首页") {
         this.displayedVideoList = [...this.videoList];
@@ -618,7 +633,6 @@ export default {
         );
       }
     },
-
     fetchVideos() {
       this.videoLoading = true;
       movieApi
@@ -645,7 +659,6 @@ export default {
           this.videoLoading = false;
         });
     },
-
     getCategoryList() {
       categoryApi
         .findAll()
@@ -662,7 +675,6 @@ export default {
           console.error("调用失败", err);
         });
     },
-
     resetAllForms() {
       this.loginForm = { username: "", password: "" };
       this.registerForm = {
@@ -679,20 +691,16 @@ export default {
         confirmNewPassword: "",
       };
     },
-
     showAuthDialog(view) {
       this.resetAllForms();
       this.currentView = view;
       this.authVisible = true;
     },
-
     switchView(view) {
       this.resetAllForms();
       this.currentView = view;
     },
-
     handleCategoryClick(cat) {
-      // 确保在从详情页返回主页时，也能点击分类
       if (this.$route.name === "VideoDetail") {
         this.$router.push({ name: "VideoPortalIndex" }).then(() => {
           this.activeCategory = cat.name;
@@ -703,7 +711,6 @@ export default {
         this.filterVideos();
       }
     },
-
     handleLoginSubmit() {
       this.$refs.loginForm.validate((valid) => {
         if (valid) {
@@ -750,7 +757,6 @@ export default {
         }
       });
     },
-
     handleRegisterSubmit() {
       this.$refs.registerForm.validate((valid) => {
         if (valid) {
@@ -783,7 +789,6 @@ export default {
         }
       });
     },
-
     handleForgotSubmit() {
       this.$refs.forgotForm.validate((valid) => {
         if (valid) {
@@ -811,7 +816,6 @@ export default {
         }
       });
     },
-
     handleUserCommand(command) {
       if (command === "logout") {
         logout()
@@ -831,19 +835,10 @@ export default {
         this.$message.info(`预留页面：点击了 [${command}]`);
       }
     },
-
-    scrollToTop() {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    },
-    openAI() {
-      this.$message.success("AI 助手模块预留点击事件");
-    },
   },
   watch: {
     $route(to, from) {
-      // 如果是从 VideoDetail 路由返回到 VideoPortalIndex 路由
       if (from.name === "VideoDetail" && to.name === "VideoPortalIndex") {
-        // 可以在这里重新加载主页列表数据，如果需要刷新最新状态
         this.fetchVideos();
         this.fetchHotVideos();
         this.fetchRankVideos();
@@ -856,11 +851,10 @@ export default {
 <style scoped>
 .nav-categories {
   display: flex;
-  align-items: center; /* 【修复点】增加居中对齐，修复"更多"与前排错位的问题 */
+  align-items: center;
   gap: 16px;
   font-size: 14px;
 }
-/* 【修复点】让 el-dropdown 组件参与到弹性居中对齐中 */
 .more-dropdown {
   display: flex;
   align-items: center;
@@ -870,7 +864,6 @@ export default {
   font-weight: bold;
   border-bottom: 2px solid var(--primary-color);
 }
-/* 分类页面头部预留样式 */
 .category-header {
   background: #fff;
   padding: 20px;
@@ -892,7 +885,6 @@ export default {
   transition: all 0.3s;
   border-bottom: 2px solid transparent;
 }
-/* ====== 基础布局与主页样式保持不变 ====== */
 .portal-container {
   --primary-color: #fb7299;
   --bg-color: #f4f5f7;
@@ -925,6 +917,7 @@ export default {
   font-weight: bold;
   color: var(--primary-color);
   text-decoration: none;
+  cursor: pointer;
 }
 .cat-item:hover {
   color: var(--primary-color);
@@ -984,7 +977,6 @@ export default {
   transform: scale(1.1);
 }
 .container {
-  /* 现在这个 container 只会在门户主页时显示 */
   max-width: 1200px;
   margin: 20px auto;
   padding: 0 16px 40px;
@@ -996,18 +988,6 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 20px;
-}
-.banner {
-  background-color: var(--card-bg);
-  border-radius: 8px;
-  height: 300px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  background-image: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
-  color: white;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 }
 .video-grid {
   display: grid;
@@ -1070,6 +1050,7 @@ export default {
   align-items: center;
   margin-bottom: 12px;
   font-size: 14px;
+  cursor: pointer;
 }
 .rank-num {
   font-weight: bold;
@@ -1119,7 +1100,7 @@ export default {
   transform: translateY(-3px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
-/* ====== 综合鉴权弹窗美化 ====== */
+
 ::v-deep .beautiful-auth-dialog {
   border-radius: 12px;
   overflow: hidden;
@@ -1246,14 +1227,7 @@ export default {
   opacity: 0;
   transform: translateX(-30px);
 }
-/* 新增和调整的样式 */
-.carousel-item-content,
-.video-card,
-.rank-item,
-.nav-left .logo {
-  cursor: pointer;
-}
-/* 轮播图样式（已在之前提供，这里不再重复展示） */
+
 .hot-videos-carousel-wrapper {
   background-color: var(--card-bg);
   border-radius: 8px;

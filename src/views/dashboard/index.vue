@@ -54,7 +54,7 @@
             <i class="el-icon-data-line card-panel-icon" />
           </div>
           <div class="card-panel-description">
-            <div class="card-panel-text">今日播放</div>
+            <div class="card-panel-text">总播放量</div>
             <count-to
               :start-val="0"
               :end-val="totalPlayCount"

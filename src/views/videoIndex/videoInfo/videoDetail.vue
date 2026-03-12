@@ -49,7 +49,7 @@
             >
             <span class="meta-item"
               ><i class="el-icon-chat-dot-round"></i>
-              {{ video.danmakuCount || 0 }} 弹幕</span
+              {{ video.danmakuCount || 0 }} 条弹幕</span
             >
             <span class="meta-item"
               ><i class="el-icon-time"></i> {{ video.publishTime }}</span
@@ -90,11 +90,6 @@
           </div>
 
           <div class="comment-publish">
-            <el-avatar
-              :src="currentUserAvatar"
-              icon="el-icon-user-solid"
-              class="my-avatar"
-            ></el-avatar>
             <el-input
               type="textarea"
               :rows="2"
@@ -120,7 +115,7 @@
 
               <div class="comment-content-wrap">
                 <div class="comment-user">
-                  {{ (rootComment.userId || "").replace("用户:", "用户") }}
+                  {{ (rootComment.userId || "").replace("用户:", "User--") }}
                 </div>
                 <div class="comment-text">{{ rootComment.content }}</div>
                 <div class="comment-info">
@@ -181,7 +176,7 @@
                     ></el-avatar>
                     <div class="sub-content">
                       <span class="sub-user">{{
-                        (child.userId || "").replace("用户:", "用户")
+                        (child.userId || "").replace("用户:", "User--")
                       }}</span>
                       <span
                         class="reply-target"
@@ -342,22 +337,13 @@ export default {
       replyTargetName: "",
       replyContent: "",
       replyTargetUserId: null,
+      hasRecordedPV: false,
     };
   },
   computed: {
     isLogin() {
       const hasToken = this.$store.getters.token || getToken();
       return !!hasToken;
-    },
-    currentUserAvatar() {
-      const userInfoStr = localStorage.getItem("userInfo");
-      if (userInfoStr) {
-        try {
-          const userInfo = JSON.parse(userInfoStr);
-          if (userInfo && userInfo.avatar) return userInfo.avatar;
-        } catch (e) {}
-      }
-      return "https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png";
     },
     currentUserId() {
       return this.$store.getters.id || this.remoteUserId || null;
@@ -671,6 +657,25 @@ export default {
       this.player.on("pause", () => (this.isPlaying = false));
       this.player.on("timeupdate", () => {
         const currentTime = this.player.getCurrentTime();
+        // --- 新增：在timeupdate事件中判断是否首次播放超过5秒 ---
+        if (
+          !this.hasRecordedPV &&
+          currentTime >= 5 &&
+          this.videoId &&
+          this.currentUserId
+        ) {
+          this.hasRecordedPV = true; // 设置标志位，防止重复记录
+          const pvPayload = {
+            videoId: this.videoId,
+            userId: this.currentUserId,
+          };
+          movieApi.recordVideoPV(pvPayload).catch((err) => {
+            // 如果记录失败，可以重置标志位，允许再次尝试
+            console.warn("Failed to record PV:", err);
+            this.hasRecordedPV = false;
+          });
+        }
+        // ---
         while (
           this.danmakuIndex < this.sortedDanmakuList.length &&
           this.sortedDanmakuList[this.danmakuIndex].playTime <= currentTime

@@ -96,11 +96,12 @@ export default {
       data: comment
     })
   },
-  // 返回视频最新评论
-  getVideoComment(id) {
+  // 播放量+1
+  recordVideoPV(data) {
     return request({
-      url: `${BASE_URL}/getVideoComment/${id}`,
+      url: `${BASE_URL}/recordVideoPV`,
       method: 'post',
+      data: data
     })
   }
 }
