@@ -7,7 +7,10 @@
         <a href="#" class="logo" @click="$router.push('/index')"
           >影视管理系统 📺</a
         >
-        <div class="nav-categories" v-if="$route.name !== 'VideoDetail'">
+        <div
+          class="nav-categories"
+          v-if="!['VideoDetail', 'UserCenter'].includes($route.name)"
+        >
           <span
             v-for="cat in mainCategories"
             :key="cat.id || cat.name"
@@ -76,12 +79,13 @@
             </el-dropdown-menu>
           </el-dropdown>
         </template>
-        <button class="post-btn">投稿</button>
       </div>
     </nav>
 
     <!-- 主体内容区容器，包含门户主页或视频详情页 -->
-    <router-view v-if="$route.name === 'VideoDetail'"></router-view>
+    <router-view
+      v-if="['VideoDetail', 'UserCenter'].includes($route.name)"
+    ></router-view>
     <template v-else>
       <div class="container">
         <main class="main-content">
@@ -824,13 +828,23 @@ export default {
             removeToken();
             this.userInfo.avatar = "";
             this.$message.success("已退出登录");
+            // 【新增】：退出登录后，如果当前不在主页，就强制跳回主页
+            if (this.$route.path !== "/" && this.$route.path !== "/index") {
+              this.$router.push("/index");
+            }
           })
           .catch(() => {
             this.isLogin = false;
             removeToken();
             this.userInfo.avatar = "";
             this.$message.success("已退出登录");
+            // 【新增】：异常情况下同样跳回主页
+            if (this.$route.path !== "/" && this.$route.path !== "/index") {
+              this.$router.push("/index");
+            }
           });
+      } else if (["profile", "history", "likes"].includes(command)) {
+        this.$router.push({ name: "UserCenter", query: { tab: command } });
       } else {
         this.$message.info(`预留页面：点击了 [${command}]`);
       }

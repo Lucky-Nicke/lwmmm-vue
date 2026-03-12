@@ -81,6 +81,19 @@ export const constantRoutes = [
         },
         hidden: true // 详情页本身也不应在任何侧边栏显示
       },
+      {
+        path: 'user-center',
+        name: 'UserCenter',
+        component: () => import('@/views/videoIndex/userInfo/UserCenter.vue'), // 根据你的实际路径修改
+        hidden: true, // 非常重要，确保它不出现在侧边栏
+        meta: {
+          title: '用户中心',
+          icon: 'el-icon-document',
+          noCache: true,
+          // 关键！当访问 /video/sysMovie/xxx 时，激活 /video/list 对应的菜单项
+          activeMenu: '/user/info'
+        },
+      }
     ]
   },
 
