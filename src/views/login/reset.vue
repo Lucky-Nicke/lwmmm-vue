@@ -220,7 +220,7 @@ export default {
               // 根据你的后端返回结构判断
               if (response.code === 200) {
                 this.$message.success(
-                  response.message || "密码修改成功，请重新登录"
+                  response.message || "密码修改成功!"
                 );
                 setTimeout(() => {
                   this.$router.push("/login");

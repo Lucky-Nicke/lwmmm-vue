@@ -69,13 +69,6 @@
               {{ video && video.liked ? "已点赞" : "点赞" }}
               {{ video ? video.likeCount || 0 : 0 }}
             </el-button>
-            <el-button
-              size="medium"
-              icon="el-icon-share"
-              round
-              @click="shareVideo"
-              >分享</el-button
-            >
           </div>
         </div>
 
@@ -279,7 +272,12 @@
       v-else-if="!loading"
       description="视频不见了或加载失败"
     ></el-empty>
-    <el-backtop target="document.body"></el-backtop>
+    <!-- 替换原有的 el-backtop，使用自定义返回顶部按钮 -->
+    <div class="floating-tools">
+      <div class="tool-btn top-btn" title="返回顶部" @click="scrollToTop">
+        ⬆️
+      </div>
+    </div>
 
     <el-dialog
       title="分享视频"
@@ -370,6 +368,14 @@ export default {
     },
   },
   methods: {
+    scrollToTop() {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+
+    goToVideoDetail(id) {
+      if (!id) return;
+      this.$router.push({ name: "VideoDetail", params: { id } });
+    },
     fetchUserInfo() {
       const token = getToken();
       if (token) {
@@ -410,9 +416,24 @@ export default {
               playTime: currentTime,
               color: "#00a1d6",
             };
+
+            // 1. 立即发射自己发的弹幕（不依赖轮询，保证秒发体验）
             this.shootDanmaku(newDanmaku);
+
+            // 2. 将弹幕加入队列并重新排序
             this.sortedDanmakuList.push(newDanmaku);
             this.sortedDanmakuList.sort((a, b) => a.playTime - b.playTime);
+
+            // 3. 【关键修复】更新弹幕指针 danmakuIndex
+            // 找到下一个播放时间严格"大于"当前时间的弹幕索引，跳过刚才发的那条
+            this.danmakuIndex = this.sortedDanmakuList.findIndex(
+              (d) => d.playTime > currentTime
+            );
+            // 如果没找到，说明在最后面，指针指到数组末尾
+            if (this.danmakuIndex === -1) {
+              this.danmakuIndex = this.sortedDanmakuList.length;
+            }
+
             this.$message.success("弹幕发送成功");
             this.danmakuInput = "";
           }
@@ -749,6 +770,34 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.floating-tools {
+  position: fixed;
+  right: 30px;
+  bottom: 50px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  z-index: 99;
+}
+.tool-btn {
+  width: 48px;
+  height: 48px;
+  background-color: #fff;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: 1px solid #e3e5e7;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  }
+}
 .action.is-active {
   color: #00a1d6 !important;
   font-weight: bold;

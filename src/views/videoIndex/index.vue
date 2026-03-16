@@ -42,11 +42,6 @@
           </el-dropdown>
         </div>
       </div>
-      <div class="nav-center">
-        <div class="search-bar">
-          <input type="text" placeholder="搜索你感兴趣的视频、作者..." />
-        </div>
-      </div>
       <div class="nav-right">
         <template v-if="!isLogin">
           <button class="login-btn" @click="showAuthDialog('login')">
@@ -185,9 +180,6 @@
       </div>
       <!-- 右下角悬浮按钮 (只在门户主页显示) -->
       <div class="floating-tools">
-        <div class="tool-btn ai-btn" title="AI 聊天助手" @click="openAI">
-          🤖
-        </div>
         <div class="tool-btn top-btn" title="返回顶部" @click="scrollToTop">
           ⬆️
         </div>
@@ -578,9 +570,6 @@ export default {
     scrollToTop() {
       window.scrollTo({ top: 0, behavior: "smooth" });
     },
-    openAI() {
-      this.$message.success("AI 助手模块预留点击事件");
-    },
     fetchRankVideos() {
       this.rankLoading = true;
       movieApi
@@ -785,7 +774,7 @@ export default {
               }
             })
             .catch((error) => {
-              this.$message.error("注册请求异常，请稍后重试！");
+              console.error("注册请求异常，请稍后重试！");
             })
             .finally(() => {
               this.loading = false;
@@ -806,7 +795,7 @@ export default {
             .then((res) => {
               const code = res.code || (res.data && res.data.code);
               if (code === 200) {
-                this.$message.success("密码修改成功，请重新登录！");
+                this.$message.success("密码修改成功!");
                 this.switchView("login");
               } else {
                 this.$message.error(

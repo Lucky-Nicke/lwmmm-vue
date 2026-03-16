@@ -76,7 +76,7 @@
         </el-form-item>
 
         <!-- 新增备注文本域 -->
-        <el-form-item label="备 注" prop="description">
+        <el-form-item label="个人签名" prop="description">
           <el-input
             v-model="sysUser.description"
             type="textarea"
@@ -172,7 +172,7 @@
       <!-- 备注列 -->
       <el-table-column
         prop="description"
-        label="备注"
+        label="个人签名"
         min-width="75"
         show-overflow-tooltip
       />

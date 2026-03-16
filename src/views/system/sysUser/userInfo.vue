@@ -53,8 +53,8 @@
               <div class="user-bio-section-body">
                 <div class="text-muted">
                   {{
-                    userInfo.desc
-                      ? userInfo.desc
+                    userInfo.description
+                      ? userInfo.description
                       : "这个人很懒，暂时没有留下什么简介..."
                   }}
                 </div>
@@ -90,7 +90,7 @@
                 <el-form-item label="个人简介">
                   <el-input
                     type="textarea"
-                    v-model="userInfo.desc"
+                    v-model="userInfo.description"
                     :rows="4"
                     placeholder="介绍一下你自己吧..."
                   >
@@ -189,7 +189,7 @@ export default {
         name: "",
         phone: "",
         avatar: "",
-        desc: "",
+        description: "",
         status: 1,
         creaT: "",
         updT: "",

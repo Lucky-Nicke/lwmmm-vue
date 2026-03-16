@@ -40,10 +40,11 @@
       <!-- 右侧主体内容 -->
       <main class="uc-content">
         <transition name="fade-slide" mode="out-in">
-          <!-- 1. 个人介绍面板 -->
+          <!-- 1. 个人介绍 & 修改密码面板 -->
           <div v-if="activeTab === 'profile'" key="profile" class="uc-panel">
             <h2 class="panel-title">个人介绍</h2>
             <div class="profile-card">
+              <!-- 基本信息修改 -->
               <el-form label-width="80px" class="profile-form">
                 <el-form-item label="用户名">
                   <el-input v-model="userInfo.username" disabled></el-input>
@@ -63,8 +64,54 @@
                   <el-button
                     type="primary"
                     class="save-btn"
-                    @click="$message.success('保存成功！')"
+                    :loading="updatingUser"
+                    @click="handleUpdateUser"
                     >保存修改</el-button
+                  >
+                </el-form-item>
+              </el-form>
+
+              <el-divider content-position="left">修改密码</el-divider>
+
+              <!-- 密码修改 -->
+              <el-form
+                label-width="80px"
+                class="profile-form"
+                :model="pwdForm"
+                :rules="pwdRules"
+                ref="pwdFormRef"
+              >
+                <el-form-item label="旧密码" prop="oldPwd">
+                  <el-input
+                    v-model="pwdForm.oldPwd"
+                    type="password"
+                    show-password
+                    placeholder="请输入旧密码"
+                  ></el-input>
+                </el-form-item>
+                <el-form-item label="新密码" prop="newPwd">
+                  <el-input
+                    v-model="pwdForm.newPwd"
+                    type="password"
+                    show-password
+                    placeholder="请输入新密码"
+                  ></el-input>
+                </el-form-item>
+                <el-form-item label="确认密码" prop="confirmPwd">
+                  <el-input
+                    v-model="pwdForm.confirmPwd"
+                    type="password"
+                    show-password
+                    placeholder="请再次输入新密码"
+                  ></el-input>
+                </el-form-item>
+                <el-form-item>
+                  <el-button
+                    type="warning"
+                    class="save-btn"
+                    :loading="updatingPwd"
+                    @click="handleResetPwd"
+                    >修改密码</el-button
                   >
                 </el-form-item>
               </el-form>
@@ -76,9 +123,10 @@
             <h2 class="panel-title">观看记录</h2>
             <div class="video-grid" v-if="historyList.length > 0">
               <div
-                class="video-card"
+                class="video-card clickable"
                 v-for="video in historyList"
                 :key="video.id"
+                @click="goToVideoDetail(video)"
               >
                 <div
                   class="video-cover"
@@ -87,7 +135,7 @@
                 <div class="video-info">
                   <div class="video-title">{{ video.title }}</div>
                   <div class="video-meta">
-                    <span>看完于 {{ video.time }}</span>
+                    <span> {{ video.time }}</span>
                   </div>
                 </div>
               </div>
@@ -100,9 +148,10 @@
             <h2 class="panel-title">点赞列表</h2>
             <div class="video-grid" v-if="likesList.length > 0">
               <div
-                class="video-card"
+                class="video-card clickable"
                 v-for="video in likesList"
                 :key="video.id"
+                @click="goToVideoDetail(video)"
               >
                 <div
                   class="video-cover"
@@ -125,39 +174,68 @@
 </template>
 
 <script>
-// 直接通过函数名引入个人信息接口
-import { getLessInfo } from "@/api/user";
-// 通过设置的名字引入用户相关日志接口 (假设导出的对象叫 userApi)
+// 请根据你的实际路径调整 import 路径！
+import { resetPassword, getLessInfo } from "@/api/user"; // 假设修改密码接口在这个路径
 import userApi from "@/api/user/user";
 
 export default {
   name: "UserCenter",
   data() {
+    // 校验两次密码是否一致
+    const validateConfirmPwd = (rule, value, callback) => {
+      if (value === "") {
+        callback(new Error("请再次输入密码"));
+      } else if (value !== this.pwdForm.newPwd) {
+        callback(new Error("两次输入密码不一致!"));
+      } else {
+        callback();
+      }
+    };
+
     return {
       activeTab: "profile",
       userInfo: {
+        id: null,
         username: "",
         nickname: "",
         avatar: "",
         sign: "",
       },
+      updatingUser: false, // 按钮加载状态
+
+      // 修改密码相关
+      pwdForm: {
+        oldPwd: "",
+        newPwd: "",
+        confirmPwd: "",
+      },
+      updatingPwd: false, // 修改密码加载状态
+      pwdRules: {
+        oldPwd: [
+          { required: true, message: "旧密码不能为空", trigger: "blur" },
+        ],
+        newPwd: [
+          { required: true, message: "新密码不能为空", trigger: "blur" },
+          { min: 6, message: "密码长度不能少于6位", trigger: "blur" },
+        ],
+        confirmPwd: [
+          { required: true, validator: validateConfirmPwd, trigger: "blur" },
+        ],
+      },
+
       historyList: [],
       likesList: [],
     };
   },
   created() {
-    // 初始化时从路由参数读取要选中的 tab
     if (this.$route.query.tab) {
       this.activeTab = this.$route.query.tab;
     }
-
-    // 初始化加载全部数据
     this.fetchUserInfo();
     this.fetchWatchLog();
     this.fetchLikeLog();
   },
   watch: {
-    // 监听路由变化，保证用户在页面内点击顶部下拉菜单也能切换
     "$route.query.tab"(newVal) {
       if (newVal) {
         this.activeTab = newVal;
@@ -167,24 +245,23 @@ export default {
   methods: {
     switchTab(tab) {
       this.activeTab = tab;
-      // 改变 url 参数但不刷新页面
       this.$router.replace({ query: { tab: tab } }).catch((err) => err);
     },
 
     // 1. 获取用户信息
     async fetchUserInfo() {
       try {
-        // vue-admin-template 通常在 store 里存有 token，或者通过 '@/utils/auth' 的 getToken()
         const token = this.$store.getters.token;
         const res = await getLessInfo(token);
 
         if (res.code === 200 && res.data) {
           const data = res.data;
           this.userInfo = {
+            id: data.id,
             username: data.username,
-            nickname: data.name, // 接口的 name 映射为 nickname
+            nickname: data.name,
             avatar: data.avatar,
-            sign: data.desc || '', // 接口的 desc 映射为 sign
+            sign: data.description || "",
           };
         }
       } catch (error) {
@@ -192,15 +269,87 @@ export default {
       }
     },
 
-    // 2. 获取观看记录
+    // 【新增】2. 修改用户信息
+    async handleUpdateUser() {
+      this.updatingUser = true;
+      try {
+        // 构造传给后端的参数，将前端的字段名还原为后端需要的字段名
+        const payload = {
+          id: this.userInfo.id, // 确保有用户ID，后端通常需要这个来识别要更新哪个用户
+          username: this.userInfo.username,
+          name: this.userInfo.nickname, // 对应后端的 name
+          description: this.userInfo.sign, // 对应后端的 description
+          avatar: this.userInfo.avatar,
+        };
+
+        const res = await userApi.updateUser(payload);
+        if (res.code === 200) {
+          this.$message.success("个人信息保存成功！");
+          // 若有需要，可以同步更新 vuex 中的用户信息
+          // this.$store.dispatch('user/getInfo')
+        }
+      } catch (error) {
+        console.error("保存个人信息失败", error);
+      } finally {
+        this.updatingUser = false;
+      }
+    },
+
+    // 【新增】3. 修改密码
+    handleResetPwd() {
+      this.$refs.pwdFormRef.validate(async (valid) => {
+        if (valid) {
+          this.updatingPwd = true;
+          try {
+            const payload = {
+              username: this.userInfo.username, // 从页面拿的用户名
+              oldPwd: this.pwdForm.oldPwd,
+              newPwd: this.pwdForm.newPwd,
+            };
+
+            const res = await resetPassword(payload);
+            if (res.code === 200) {
+              this.$message.success("密码修改成功!");
+              this.$refs.pwdFormRef.resetFields(); // 清空表单
+
+              // 修改密码后通常需要退出登录
+              // setTimeout(() => {
+              //   this.$store.dispatch('user/logout').then(() => {
+              //     this.$router.push('/login');
+              //   });
+              // }, 1500);
+            }
+          } catch (error) {
+            console.error("密码修改异常", error);
+          } finally {
+            this.updatingPwd = false;
+          }
+        } else {
+          return false;
+        }
+      });
+    },
+
+    // 【新增】4. 跳转到视频详情页
+    goToVideoDetail(video) {
+      // 兼容判断：日志接口可能返回的是 videoId 或者是 id
+      const targetId = video.videoId || video.id;
+
+      if (!targetId) {
+        this.$message.warning("视频ID获取失败，无法跳转");
+        return;
+      }
+
+      this.$router.push({
+        name: "VideoDetail", // 对应你路由配置中的 name: 'VideoDetail'
+        params: { id: targetId },
+      });
+    },
+
     async fetchWatchLog() {
       try {
         const res = await userApi.userWatchLog();
-        // 兼容处理：依据 vue-admin-template 的 axios 拦截器可能直接返回了 data 或者原封的 res
         let dataList = res.data || res;
-
-        // 如果后端有外层包装 {code: 200, data: [...]}，取 res.data 即可
-        // 这里做个健壮性判断，确保赋值的是数组
         if (Array.isArray(dataList)) {
           this.historyList = dataList;
         } else if (res.code === 200 && Array.isArray(res.data)) {
@@ -211,13 +360,10 @@ export default {
       }
     },
 
-    // 3. 获取点赞列表
     async fetchLikeLog() {
       try {
         const res = await userApi.userLikeLog();
-        // 处理逻辑与观看记录一致
         let dataList = res.data || res;
-
         if (Array.isArray(dataList)) {
           this.likesList = dataList;
         } else if (res.code === 200 && Array.isArray(res.data)) {
@@ -232,6 +378,15 @@ export default {
 </script>
 
 <style scoped>
+.video-card.clickable {
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.video-card.clickable:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
 /* 继承主页的色彩变量 */
 .user-center-container {
   --primary-color: #fb7299;
