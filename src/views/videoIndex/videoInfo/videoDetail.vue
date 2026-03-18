@@ -339,10 +339,6 @@ export default {
     };
   },
   computed: {
-    isLogin() {
-      const hasToken = this.$store.getters.token || getToken();
-      return !!hasToken;
-    },
     currentUserId() {
       return this.$store.getters.id || this.remoteUserId || null;
     },
@@ -351,8 +347,11 @@ export default {
     this.fetchUserInfo();
     this.videoId = this.$route.params.id;
     this.initData();
+    this.$root.$on("on-user-login-success", this.fetchUserInfo);
   },
   beforeDestroy() {
+    this.$root.$off("on-user-login-success", this.fetchUserInfo);
+
     if (this.player) {
       this.player.dispose();
       this.player = null;
@@ -368,6 +367,10 @@ export default {
     },
   },
   methods: {
+    checkIsLogin() {
+      const hasToken = this.$store.getters.token || getToken();
+      return !!hasToken;
+    },
     scrollToTop() {
       window.scrollTo({ top: 0, behavior: "smooth" });
     },
@@ -392,11 +395,12 @@ export default {
         this.$message.warning("视频未加载，无法发送弹幕");
         return;
       }
-      if (!this.isLogin) {
+      if (!this.checkIsLogin() || this.currentUserId === null) {
         this.$message.warning("请先登录");
         return;
       }
 
+      this.fetchUserInfo(); // 尝试重新获取一次
       const currentTime = this.player.getCurrentTime();
       const content = this.danmakuInput;
 
@@ -443,10 +447,12 @@ export default {
 
     likeVideo() {
       if (!this.video) return;
-      if (!this.$store.getters.token) {
+      if (!this.checkIsLogin() || this.currentUserId === null) {
         this.$message.warning("请先登录");
         return;
       }
+
+      this.fetchUserInfo();
       const isCurrentlyLiked = !!this.video.liked;
       const targetAction = !isCurrentlyLiked;
       const likePayload = {
@@ -490,11 +496,12 @@ export default {
         this.$message.warning("评论内容不能为空");
         return;
       }
-      if (!this.isLogin) {
+      if (!this.checkIsLogin() || this.currentUserId === null) {
         this.$message.warning("请先登录");
         return;
       }
 
+      this.fetchUserInfo(); // 尝试重新获取一次
       const commentPayload = {
         videoId: this.videoId,
         userId: this.currentUserId,
@@ -517,10 +524,12 @@ export default {
     },
 
     likeComment(comment) {
-      if (!this.$store.getters.token) {
+      if (!this.checkIsLogin() || this.currentUserId === null) {
         this.$message.warning("请先登录");
         return;
       }
+
+      this.fetchUserInfo();
       const isCurrentlyLiked = !!comment.liked;
       const targetAction = !isCurrentlyLiked;
       const likePayload = {
@@ -579,7 +588,7 @@ export default {
         this.$message.warning("回复内容不能为空");
         return;
       }
-      if (!this.isLogin) {
+      if (!this.checkIsLogin() || this.currentUserId === null) {
         this.$message.warning("请先登录");
         return;
       }

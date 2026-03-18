@@ -93,6 +93,12 @@ export const constantRoutes = [
           // 关键！当访问 /video/sysMovie/xxx 时，激活 /video/list 对应的菜单项
           activeMenu: '/user/info'
         },
+      },
+      {
+        path: 'creator',
+        name: 'CreatorCenter',
+        component: () => import('@/views/videoIndex/userInfo/CreatorCenter.vue'), // 刚才新建的文件路径
+        meta: { title: '创作中心' }
       }
     ]
   },

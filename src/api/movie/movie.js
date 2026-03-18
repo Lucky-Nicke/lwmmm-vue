@@ -103,5 +103,22 @@ export default {
       method: 'post',
       data: data
     })
+  },
+
+  // 投稿视频
+  userUploadVideo(data) {
+    return request({
+      url: `${BASE_URL}/userUploadVideo`,
+      method: 'post',
+      data: data
+    })
+  },
+
+  // 获取投稿视频
+  showApproveRecord() {
+    return request({
+      url: `${BASE_URL}/showApproveRecord`,
+      method: 'post'
+    })
   }
 }

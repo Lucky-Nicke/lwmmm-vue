@@ -9,7 +9,11 @@
         >
         <div
           class="nav-categories"
-          v-if="!['VideoDetail', 'UserCenter'].includes($route.name)"
+          v-if="
+            !['VideoDetail', 'UserCenter', 'CreatorCenter'].includes(
+              $route.name
+            )
+          "
         >
           <span
             v-for="cat in mainCategories"
@@ -65,6 +69,7 @@
               />
             </div>
             <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item command="upload">创作中心</el-dropdown-item>
               <el-dropdown-item command="profile">个人介绍</el-dropdown-item>
               <el-dropdown-item command="history">观看记录</el-dropdown-item>
               <el-dropdown-item command="likes">点赞列表</el-dropdown-item>
@@ -79,7 +84,9 @@
 
     <!-- 主体内容区容器，包含门户主页或视频详情页 -->
     <router-view
-      v-if="['VideoDetail', 'UserCenter'].includes($route.name)"
+      v-if="
+        ['VideoDetail', 'UserCenter', 'CreatorCenter'].includes($route.name)
+      "
     ></router-view>
     <template v-else>
       <div class="container">
@@ -728,6 +735,7 @@ export default {
                 this.$message.success("登录成功！");
                 this.isLogin = true;
                 this.authVisible = false;
+                this.$root.$emit("on-user-login-success");
               } else {
                 this.$message.warning(
                   "登录成功但获取用户信息失败，请手动刷新！"
@@ -817,7 +825,6 @@ export default {
             removeToken();
             this.userInfo.avatar = "";
             this.$message.success("已退出登录");
-            // 【新增】：退出登录后，如果当前不在主页，就强制跳回主页
             if (this.$route.path !== "/" && this.$route.path !== "/index") {
               this.$router.push("/index");
             }
@@ -827,11 +834,13 @@ export default {
             removeToken();
             this.userInfo.avatar = "";
             this.$message.success("已退出登录");
-            // 【新增】：异常情况下同样跳回主页
             if (this.$route.path !== "/" && this.$route.path !== "/index") {
               this.$router.push("/index");
             }
           });
+      } else if (command === "upload") {
+        this.$router.push({ name: "CreatorCenter" });
+        // 或者使用 this.$message.info('测试弹窗：点击了投稿！');
       } else if (["profile", "history", "likes"].includes(command)) {
         this.$router.push({ name: "UserCenter", query: { tab: command } });
       } else {
