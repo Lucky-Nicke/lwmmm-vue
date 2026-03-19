@@ -174,9 +174,12 @@ export default {
         await this.$confirm(`确定审核通过《${row.videoName}》吗？`, "提示", {
           type: "success",
         });
+        // 从 localStorage 获取 userId
+        const userId = localStorage.getItem("userId");
         const res = await movieApi.doApproval({
           videoId: row.videoId,
           approStatus: "SUCC",
+          userId: userId, // 携带 userId 参数
         });
         if (res.code === 200 || res.code === 20000) {
           this.$message.success("审核已通过");
@@ -188,6 +191,27 @@ export default {
     handleReject(row) {
       this.rejectForm = { videoId: row.videoId, approDesc: "" };
       this.rejectDialogVisible = true;
+    },
+    async confirmReject() {
+      if (!this.rejectForm.approDesc.trim())
+        return this.$message.warning("请填写驳回原因");
+      this.submitLoading = true;
+      try {
+        // 从 localStorage 获取 userId
+        const userId = localStorage.getItem("userId");
+        const res = await movieApi.doApproval({
+          ...this.rejectForm,
+          approStatus: "FAIL",
+          userId: userId, // 携带 userId 参数
+        });
+        if (res.code === 200 || res.code === 20000) {
+          this.$message.success("已驳回申请");
+          this.rejectDialogVisible = false;
+          this.getList();
+        }
+      } finally {
+        this.submitLoading = false;
+      }
     },
 
     async confirmReject() {
