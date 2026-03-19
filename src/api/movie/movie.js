@@ -115,10 +115,48 @@ export default {
   },
 
   // 获取投稿视频
-  showApproveRecord() {
+  showApproveRecord(userId) {
     return request({
       url: `${BASE_URL}/showApproveRecord`,
-      method: 'post'
+      method: 'post',
+      params: { userId: userId } // 这里的 userId 报错未定义，因为它不知道从哪来
     })
-  }
+  },
+
+  // 用户取消审核接口
+  doUserCancelApproval(userId, videoId) {
+    return request({
+      url: `${BASE_URL}/doUserCancelApproval`,
+      method: 'post',
+      // Body 传参使用 data
+      data: {
+        userId: userId,
+        videoId: videoId
+      }
+    });
+  },
+  // 管理员审核接口（统一）
+  doApproval(data) {
+    return request({
+      url: `${BASE_URL}/doApproval`,
+      method: 'post',
+      data: data
+    });
+  },
+  // 获取所有待审核列表
+  getApproveList() {
+    return request({
+      url: `${BASE_URL}/showAdminApproveRecord`,
+      method: 'post'
+    });
+  },
+
+  // 查询我上传的视频
+  showMyUploadVideo(username) {
+    return request({
+      url: `${BASE_URL}/showMyUploadVideo`,
+      method: 'post',
+      params: { username: username } // 这里的 userId 报错未定义，因为它不知道从哪来
+    });
+  },
 }

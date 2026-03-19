@@ -10,60 +10,75 @@ import ParentView from '@/components/ParentView'
 const _import = require('./router/_import_' + process.env.NODE_ENV) // 获取组件的方法
 
 NProgress.configure({ showSpinner: false }) // NProgress Configuration
-const whiteList = ['/login', '/reset-password', '/index', '/index/user-center', '/index/creator'] // no redirect whitelist
+const whiteList = [
+  '/login',
+  '/reset-password',
+  '/index'
+]
+
+// 是否属于门户页面（放行）
+function isWhitePath(path) {
+  return whiteList.some(w => path.startsWith(w))
+}
+
 router.beforeEach(async (to, from, next) => {
   NProgress.start()
-  // set page title
   document.title = getPageTitle(to.meta.title)
-  // determine whether the user has logged in
+
   const hasToken = getToken()
+
+  // ✅ 第一优先：门户页面直接放行（无论有没有 token）
+  if (isWhitePath(to.path)) {
+    next()
+    return
+  }
+
   if (hasToken) {
     if (to.path === '/login') {
-      // if is logged in, redirect to the home page
       next({ path: '/' })
       NProgress.done()
     } else {
       const hasGetUserInfo = store.getters.name
+
       if (hasGetUserInfo) {
         next()
       } else {
         try {
-          // get user info
-          await store.dispatch('user/getInfo')// 请求获取用户信息
-          if (store.getters.menus.length < 1) {
-            global.antRouter = []
+          await store.dispatch('user/getInfo')
+
+          const menus = store.getters.menus || []
+
+          if (menus.length > 0) {
+            const accessRoutes = filterAsyncRouter(menus)
+            router.addRoutes(accessRoutes)
+
+            router.addRoutes([
+              { path: '*', redirect: '/404', hidden: true }
+            ])
+
+            global.antRouter = accessRoutes
+
+            next({ ...to, replace: true })
+          } else {
+            // ❗没有菜单，不要乱跳 dashboard
             next()
           }
-          const menus = filterAsyncRouter(store.getters.menus)// 1.过滤路由
-          console.log(menus)
-          router.addRoutes(menus) // 2.动态添加路由
-          let lastRou = [{ path: '*', redirect: '/404', hidden: true }]
-          router.addRoutes(lastRou)
-          global.antRouter = menus // 3.将路由数据传递给全局变量，做侧边栏菜单渲染工作
-          next({
-            ...to,
-            replace: true
-          })
-          //next()
+
         } catch (error) {
-          // remove token and go to login page to re-login
-          console.log(error)
-          await store.dispatch('user/resetToken')
-          Message.error(error || 'Has Error')
-          next(`/login?redirect=${to.path}`)
-          NProgress.done()
+          console.log('getInfo error:', error)
+
+          // ❗关键修改：不要强制踢登录
+          // await store.dispatch('user/resetToken')
+
+          // 👉 直接放行（否则你门户永远进不去）
+          next()
         }
       }
     }
-  } else { /* has no token*/
-    if (whiteList.some(path => to.path.startsWith(path))) {
-      // in the free login whitelist, go directly
-      next()
-    } else {
-      // other pages that do not have permission to access are redirected to the login page.
-      next(`/login?redirect=${to.path}`)
-      NProgress.done()
-    }
+  } else {
+    // 未登录
+    next(`/login?redirect=${to.path}`)
+    NProgress.done()
   }
 })
 

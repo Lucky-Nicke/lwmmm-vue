@@ -46,6 +46,20 @@
           </el-dropdown>
         </div>
       </div>
+
+      <!-- 在 nav-left 结束标签后，nav-right 开始标签前插入 -->
+      <div class="nav-center">
+        <div class="search-bar">
+          <input
+            v-model="searchQuery"
+            placeholder="搜索视频标题..."
+            @input="handleSearch"
+            @keyup.enter="handleSearch"
+          />
+          <i class="el-icon-search search-icon" @click="handleSearch"></i>
+        </div>
+      </div>
+
       <div class="nav-right">
         <template v-if="!isLogin">
           <button class="login-btn" @click="showAuthDialog('login')">
@@ -91,17 +105,22 @@
     <template v-else>
       <div class="container">
         <main class="main-content">
-          <div class="category-header" v-if="activeCategory !== '首页'">
-            <h2>当前分类：{{ activeCategory }}</h2>
-            <p>这里是 {{ activeCategory }} 分类的视频列表</p>
-            <p
-              v-if="displayedVideoList.length === 0 && !videoLoading"
-              style="color: #666; margin-top: 10px"
-            ></p>
+          <div
+            class="category-header"
+            v-if="activeCategory !== '首页' || searchQuery"
+          >
+            <h2 v-if="searchQuery">
+              搜索关键词为：<span style="color: var(--primary-color)">{{
+                searchQuery
+              }}</span>
+            </h2>
+            <h2 v-else>当前分类：{{ activeCategory }}</h2>
+            <!-- 这里原有的 <p> 标签（这里是 XX 分类的视频列表）已被删除 -->
           </div>
+          <!-- 修改轮播图：增加 !searchQuery 判断，当有搜索内容时隐藏 -->
           <div
             class="hot-videos-carousel-wrapper"
-            v-if="activeCategory === '首页'"
+            v-if="activeCategory === '首页' && !searchQuery"
           >
             <el-carousel
               :interval="4000"
@@ -437,6 +456,8 @@ export default {
     };
 
     return {
+      searchQuery: "", // 新增：搜索关键词
+
       isLogin: false,
       authVisible: false,
       userInfo: {
@@ -545,27 +566,36 @@ export default {
     },
   },
   methods: {
+    // 1. 页面加载时检查登录状态并同步本地存储
     checkLoginStatus() {
       const token = getToken();
       if (token) {
-        // 如果 cookie 中有 token，说明可能处于登录状态，去拉取用户信息验证一下
         getInfo(token)
           .then((res) => {
             if (res.code === 200 && res.data) {
               this.userInfo.avatar = res.data.avatar;
-              this.isLogin = true; // 恢复登录状态
+              this.isLogin = true;
+              // --- 新增：存储到 localStorage ---
+              localStorage.setItem("userId", res.data.userId);
+              localStorage.setItem("username", res.data.username);
+              // ------------------------------
             } else {
-              // 获取失败说明 token 可能过期了，清除废弃 token
-              removeToken();
+              this.clearLocalUserData(); // 清理
               this.isLogin = false;
             }
           })
           .catch(() => {
-            // 请求异常也当做未登录处理
-            removeToken();
+            this.clearLocalUserData(); // 清理
             this.isLogin = false;
           });
       }
+    },
+    // 辅助方法：统一清理本地用户数据
+    clearLocalUserData() {
+      removeToken();
+      localStorage.removeItem("userId");
+      localStorage.removeItem("username");
+      this.userInfo.avatar = "";
     },
     goToVideoDetail(videoId) {
       if (videoId) {
@@ -624,13 +654,33 @@ export default {
           this.hotVideoLoading = false;
         });
     },
+    // 找到 methods 中的 filterVideos 并替换为以下内容
     filterVideos() {
-      if (this.activeCategory === "首页") {
-        this.displayedVideoList = [...this.videoList];
-      } else {
-        this.displayedVideoList = this.videoList.filter(
+      let filtered = [...this.videoList];
+      // 1. 处理分类逻辑
+      if (this.activeCategory !== "首页") {
+        filtered = filtered.filter(
           (video) => video.category === this.activeCategory
         );
+      }
+      // 2. 处理搜索逻辑 (前端过滤)
+      if (this.searchQuery.trim()) {
+        const query = this.searchQuery.trim().toLowerCase();
+        filtered = filtered.filter((video) =>
+          video.title.toLowerCase().includes(query)
+        );
+      }
+      this.displayedVideoList = filtered;
+    },
+    // 新增 handleSearch 方法
+    handleSearch() {
+      // 如果当前在详情页，搜索时自动跳转回主页展示结果
+      if (this.$route.name === "VideoDetail") {
+        this.$router.push({ name: "VideoPortalIndex" }).then(() => {
+          this.filterVideos();
+        });
+      } else {
+        this.filterVideos();
       }
     },
     fetchVideos() {
@@ -711,6 +761,7 @@ export default {
         this.filterVideos();
       }
     },
+    // 2. 登录逻辑修改
     handleLoginSubmit() {
       this.$refs.loginForm.validate((valid) => {
         if (valid) {
@@ -732,17 +783,18 @@ export default {
             .then((infoRes) => {
               if (infoRes.code === 200 && infoRes.data) {
                 this.userInfo.avatar = infoRes.data.avatar;
+
+                // --- 新增：登录成功存入 localStorage ---
+                localStorage.setItem("userId", infoRes.data.userId);
+                localStorage.setItem("username", infoRes.data.username);
+                // ------------------------------------
                 this.$message.success("登录成功！");
                 this.isLogin = true;
                 this.authVisible = false;
                 this.$root.$emit("on-user-login-success");
               } else {
-                this.$message.warning(
-                  "登录成功但获取用户信息失败，请手动刷新！"
-                );
-                this.isLogin = true;
-                removeToken();
-                this.userInfo.avatar = "";
+                this.$message.warning("登录成功但获取用户信息失败！");
+                this.clearLocalUserData();
                 this.isLogin = false;
                 this.authVisible = false;
               }
@@ -817,34 +869,36 @@ export default {
         }
       });
     },
+    // 3. 退出登录逻辑修改
     handleUserCommand(command) {
       if (command === "logout") {
         logout()
           .then(() => {
             this.isLogin = false;
-            removeToken();
-            this.userInfo.avatar = "";
+
+            // --- 新增：清除本地存储 ---
+            this.clearLocalUserData();
+            // -----------------------
             this.$message.success("已退出登录");
             if (this.$route.path !== "/" && this.$route.path !== "/index") {
               this.$router.push("/index");
             }
           })
           .catch(() => {
+            // 即便接口报错，前端也强制清理状态
             this.isLogin = false;
-            removeToken();
-            this.userInfo.avatar = "";
+            this.clearLocalUserData();
             this.$message.success("已退出登录");
             if (this.$route.path !== "/" && this.$route.path !== "/index") {
               this.$router.push("/index");
             }
           });
-      } else if (command === "upload") {
+      }
+      // ... 其他 command 处理保持不变
+      else if (command === "upload") {
         this.$router.push({ name: "CreatorCenter" });
-        // 或者使用 this.$message.info('测试弹窗：点击了投稿！');
       } else if (["profile", "history", "likes"].includes(command)) {
         this.$router.push({ name: "UserCenter", query: { tab: command } });
-      } else {
-        this.$message.info(`预留页面：点击了 [${command}]`);
       }
     },
   },
@@ -861,6 +915,46 @@ export default {
 </script>
 
 <style scoped>
+/* 找到对应的样式位置添加或覆盖 */
+.nav-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  margin: 0 20px;
+}
+.nav-center .search-bar {
+  display: flex;
+  align-items: center; /* 新增：垂直居中 */
+  background: #f1f2f3; /* 稍微深一点的颜色，更清晰 */
+  border: 1px solid #e3e5e7;
+  border-radius: 8px;
+  padding: 0 12px;
+  width: 100%;
+  max-width: 400px; /* 限制最大宽度 */
+  height: 36px;
+  transition: background 0.3s;
+}
+.search-bar:hover {
+  background: #fff;
+  border-color: var(--primary-color);
+}
+.search-bar input {
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  font-size: 14px;
+  color: var(--text-main);
+}
+.search-icon {
+  cursor: pointer;
+  color: #61666d;
+  font-size: 18px;
+  margin-left: 8px;
+}
+.search-icon:hover {
+  color: var(--primary-color);
+}
 .nav-categories {
   display: flex;
   align-items: center;

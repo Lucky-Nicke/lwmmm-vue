@@ -1,0 +1,282 @@
+<template>
+  <div class="admin-appro-container">
+    <el-card shadow="never">
+      <div slot="header" class="card-header">
+        <span class="title">📋 视频审核管理</span>
+        <el-button size="small" icon="el-icon-refresh" @click="getList"
+          >刷新数据</el-button
+        >
+      </div>
+
+      <el-table
+        :data="tableData"
+        v-loading="loading"
+        stripe
+        border
+        style="width: 100%"
+      >
+        <el-table-column
+          prop="id"
+          label="序号"
+          width="70"
+          align="center"
+        ></el-table-column>
+
+        <el-table-column label="封面" width="110" align="center">
+          <template slot-scope="scope">
+            <el-image
+              style="width: 80px; height: 50px; border-radius: 4px"
+              :src="scope.row.image"
+              fit="cover"
+              :preview-src-list="[scope.row.image]"
+            >
+              <div slot="error" class="image-error">无封面</div>
+            </el-image>
+          </template>
+        </el-table-column>
+
+        <el-table-column
+          prop="videoName"
+          label="影视名称"
+          min-width="140"
+          show-overflow-tooltip
+        ></el-table-column>
+        <el-table-column
+          prop="uploadBy"
+          label="上传人ID"
+          width="100"
+          align="center"
+        ></el-table-column>
+
+        <el-table-column label="审核状态" width="120" align="center">
+          <template slot-scope="scope">
+            <el-tag :type="getStatusType(scope.row.approStatus)" size="medium">
+              {{ getStatusText(scope.row.approStatus) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="上传时间" width="155" align="center">
+          <template slot-scope="scope">{{
+            formatTime(scope.row.createTime)
+          }}</template>
+        </el-table-column>
+
+        <el-table-column
+          prop="approDesc"
+          label="审核意见"
+          min-width="130"
+          show-overflow-tooltip
+        >
+          <template slot-scope="scope">{{
+            scope.row.approDesc || "暂无"
+          }}</template>
+        </el-table-column>
+
+        <el-table-column label="操作" width="220" align="center" fixed="right">
+          <template slot-scope="scope">
+            <div class="op-container">
+              <template v-if="scope.row.approStatus === 'DOING'">
+                <el-button
+                  size="mini"
+                  type="success"
+                  @click="handleApprove(scope.row)"
+                  >通过</el-button
+                >
+                <el-button
+                  size="mini"
+                  type="danger"
+                  plain
+                  @click="handleReject(scope.row)"
+                  >驳回</el-button
+                >
+              </template>
+              <span v-else class="status-end">— 已结束 —</span>
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <div class="pagination-wrapper">
+        <el-pagination
+          background
+          layout="total, prev, pager, next"
+          :total="total"
+          :page-size="pageSize"
+          :current-page="currentPage"
+          @current-change="handlePageChange"
+        ></el-pagination>
+      </div>
+    </el-card>
+
+    <!-- 驳回弹窗 -->
+    <el-dialog
+      title="填写驳回原因"
+      :visible.sync="rejectDialogVisible"
+      width="400px"
+    >
+      <el-form :model="rejectForm" label-width="80px">
+        <el-form-item label="原因" required>
+          <el-input
+            v-model="rejectForm.approDesc"
+            type="textarea"
+            :rows="4"
+            placeholder="请填写驳回原因..."
+          ></el-input>
+        </el-form-item>
+      </el-form>
+      <div slot="footer">
+        <el-button @click="rejectDialogVisible = false">取消</el-button>
+        <el-button type="danger" :loading="submitLoading" @click="confirmReject"
+          >确认驳回</el-button
+        >
+      </div>
+    </el-dialog>
+  </div>
+</template>
+
+<script>
+import movieApi from "@/api/movie/movie";
+
+export default {
+  name: "AdminApproVideo",
+  data() {
+    return {
+      loading: false,
+      submitLoading: false,
+      tableData: [],
+      total: 0,
+      pageSize: 10,
+      currentPage: 1,
+      rejectDialogVisible: false,
+      rejectForm: { videoId: null, approDesc: "" },
+    };
+  },
+  created() {
+    this.getList();
+  },
+  methods: {
+    async getList() {
+      this.loading = true;
+      try {
+        const res = await movieApi.getApproveList();
+        if (res.code === 200 || res.code === 20000) {
+          this.tableData = res.data || [];
+          this.total = this.tableData.length;
+        }
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async handleApprove(row) {
+      try {
+        await this.$confirm(`确定审核通过《${row.videoName}》吗？`, "提示", {
+          type: "success",
+        });
+        const res = await movieApi.doApproval({
+          videoId: row.videoId,
+          approStatus: "SUCC",
+        });
+        if (res.code === 200 || res.code === 20000) {
+          this.$message.success("审核已通过");
+          this.getList();
+        }
+      } catch (e) {}
+    },
+
+    handleReject(row) {
+      this.rejectForm = { videoId: row.videoId, approDesc: "" };
+      this.rejectDialogVisible = true;
+    },
+
+    async confirmReject() {
+      if (!this.rejectForm.approDesc.trim())
+        return this.$message.warning("请填写驳回原因");
+      this.submitLoading = true;
+      try {
+        const res = await movieApi.doApproval({
+          ...this.rejectForm,
+          approStatus: "FAIL",
+        });
+        if (res.code === 200 || res.code === 20000) {
+          this.$message.success("已驳回申请");
+          this.rejectDialogVisible = false;
+          this.getList();
+        }
+      } finally {
+        this.submitLoading = false;
+      }
+    },
+
+    getStatusType(status) {
+      const map = {
+        DOING: "warning",
+        PASS: "success",
+        SUCC: "success",
+        REJECT: "danger",
+        FAIL: "danger",
+        CANCEL: "info",
+      };
+      return map[status] || "info";
+    },
+
+    getStatusText(status) {
+      const map = {
+        DOING: "审核中",
+        PASS: "已通过",
+        SUCC: "已通过",
+        REJECT: "已驳回",
+        FAIL: "已驳回",
+        CANCEL: "已撤回",
+      };
+      return map[status] || "未知";
+    },
+
+    formatTime(timeStr) {
+      return timeStr ? timeStr.replace("T", " ").substring(0, 16) : "-";
+    },
+
+    handlePageChange(page) {
+      this.currentPage = page;
+      // 若后端支持分页，请在此调用带参的 getList
+    },
+  },
+};
+</script>
+
+<style scoped>
+.admin-appro-container {
+  padding: 20px;
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.title {
+  font-size: 16px;
+  font-weight: bold;
+}
+.image-error {
+  line-height: 50px;
+  text-align: center;
+  color: #ccc;
+  font-size: 12px;
+}
+/* 操作列居中方案 */
+.op-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px; /* 按钮之间的间距 */
+}
+.status-end {
+  color: #909399;
+  font-size: 13px;
+}
+.pagination-wrapper {
+  margin-top: 16px;
+  text-align: right;
+}
+</style>
