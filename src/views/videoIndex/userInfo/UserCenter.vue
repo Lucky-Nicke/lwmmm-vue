@@ -4,13 +4,25 @@
       <!-- 左侧侧边栏导航 -->
       <aside class="uc-sidebar">
         <div class="uc-user-info">
-          <img
-            :src="
-              userInfo.avatar ||
-              'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
-            "
-            class="uc-avatar"
-          />
+          <!-- 新增：el-upload 包裹头像 -->
+          <el-upload
+            class="avatar-uploader"
+            action=""
+            :http-request="uploadAvatarAction"
+            :show-file-list="false"
+            :before-upload="beforeAvatarUpload"
+          >
+            <img
+              :src="
+                userInfo.avatar ||
+                'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+              "
+              class="uc-avatar"
+              title="点击更换头像"
+            />
+            <div class="avatar-edit-mask">更换头像</div>
+          </el-upload>
+
           <div class="uc-name">
             {{ userInfo.nickname || userInfo.username || "神秘用户" }}
           </div>
@@ -135,7 +147,7 @@
                 <div class="video-info">
                   <div class="video-title">{{ video.title }}</div>
                   <div class="video-meta">
-                    <span> {{ video.time }}</span>
+                    <span>观看于: {{ video.time }}</span>
                   </div>
                 </div>
               </div>
@@ -174,7 +186,8 @@
 </template>
 
 <script>
-// 请根据你的实际路径调整 import 路径！
+// 1. 引入 request 工具类
+import request from "@/utils/request";
 import { resetPassword, getLessInfo } from "@/api/user"; // 假设修改密码接口在这个路径
 import userApi from "@/api/user/user";
 
@@ -193,6 +206,9 @@ export default {
     };
 
     return {
+      uploadHeaders: {
+        token: this.$store.getters.token,
+      },
       activeTab: "profile",
       userInfo: {
         id: null,
@@ -228,6 +244,15 @@ export default {
     };
   },
   created() {
+    // 1. 检查是否存在 token
+    const token = this.getCookie("vue_admin_template_token");
+    if (!token) {
+      // 2. 如果没有 token，提示并跳转回首页
+      // alert("请先登录"); // 根据需求决定是否提示
+      this.$router.push("/index");
+      this.$message.warning("请先登录");
+      return; // 阻止后续逻辑执行
+    }
     if (this.$route.query.tab) {
       this.activeTab = this.$route.query.tab;
     }
@@ -243,6 +268,60 @@ export default {
     },
   },
   methods: {
+    // 获取 Cookie 的简单辅助函数
+    getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(";").shift();
+    },
+    beforeAvatarUpload(file) {
+      const isLt2M = file.size / 1024 / 1024 < 2;
+      if (!isLt2M) {
+        this.$message.error("上传头像图片大小不能超过 2MB!");
+      }
+      return isLt2M;
+    },
+    async uploadAvatarAction(option) {
+      this.updatingUser = true; // 复用个人信息的 loading 状态
+      let formData = new FormData();
+      formData.append("uploadImage", option.file); // 对应后端参数名
+
+      try {
+        const res = await request({
+          url: "/admin/system/upload/uploadImage",
+          method: "post",
+          data: formData,
+        });
+        // 兼容不同的 code 返回（有的项目是 200，有的是 20000）
+        if (res.code === 200 || res.code === 20000) {
+          this.userInfo.avatar = res.data; // 更新本地头像预览地址
+
+          // 关键：上传后立即调用保存接口，将头像 URL 存入数据库
+          await this.handleUpdateUser();
+
+          option.onSuccess();
+        } else {
+          this.$message.error(res.message || "上传失败");
+        }
+      } catch (error) {
+        console.error("头像上传异常", error);
+        this.$message.error("服务器响应异常");
+      } finally {
+        this.updatingUser = false;
+      }
+    },
+    // 新增：上传成功的回调
+    async handleAvatarSuccess(res, file) {
+      // 根据你提供的接口 Result 结构，假设返回的 URL 在 res.data 中
+      if (res.code === 200) {
+        this.userInfo.avatar = res.data; // 更新本地显示的头像地址
+        this.$message.success("头像上传成功，正在保存...");
+        // 调用你现有的保存接口，将新头像 URL 存入数据库
+        await this.handleUpdateUser();
+      } else {
+        this.$message.error(res.message || "上传失败");
+      }
+    },
     switchTab(tab) {
       this.activeTab = tab;
       this.$router.replace({ query: { tab: tab } }).catch((err) => err);
@@ -378,6 +457,43 @@ export default {
 </script>
 
 <style scoped>
+/* 添加到 <style scoped> 中 */
+/* 新增头像上传预览容器样式 */
+.avatar-uploader {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  border-radius: 50%;
+}
+.avatar-edit-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.avatar-uploader:hover .avatar-edit-mask {
+  opacity: 1;
+}
+/* 确保头像容器是圆形的，不影响布局 */
+.uc-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: block;
+  object-fit: cover;
+}
 .video-card.clickable {
   cursor: pointer;
   transition: all 0.3s;

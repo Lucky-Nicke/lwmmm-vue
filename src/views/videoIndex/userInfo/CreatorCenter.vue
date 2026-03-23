@@ -79,10 +79,10 @@
               <el-table-column
                 prop="id"
                 label="序号"
-                width="80"
+                width="70"
                 align="center"
               ></el-table-column>
-              <el-table-column label="封面" width="120" align="center">
+              <el-table-column label="封面" width="110" align="center">
                 <template slot-scope="scope">
                   <el-image
                     style="width: 80px; height: 50px; border-radius: 4px"
@@ -93,7 +93,7 @@
               </el-table-column>
               <el-table-column
                 label="影视名称"
-                min-width="150"
+                min-width="120"
                 show-overflow-tooltip
               >
                 <template slot-scope="scope">
@@ -102,7 +102,30 @@
                   }}</span>
                 </template>
               </el-table-column>
-              <el-table-column label="审核状态" width="120" align="center">
+
+              <!-- 新增字段：作者 -->
+              <el-table-column
+                prop="director"
+                label="作者"
+                width="100"
+                show-overflow-tooltip
+              ></el-table-column>
+              <!-- 新增字段：所属栏目 -->
+              <el-table-column
+                prop="cid"
+                label="所属栏目"
+                width="90"
+                align="center"
+              ></el-table-column>
+              <!-- 新增字段：描述 -->
+              <el-table-column
+                prop="description"
+                label="影视描述"
+                min-width="150"
+                show-overflow-tooltip
+              ></el-table-column>
+
+              <el-table-column label="审核状态" width="100" align="center">
                 <template slot-scope="scope">
                   <el-tag
                     :type="getStatusType(scope.row.approStatus)"
@@ -112,19 +135,23 @@
                   </el-tag>
                 </template>
               </el-table-column>
-              <el-table-column label="上传时间" width="160" align="center">
+              <el-table-column label="上传时间" width="155" align="center">
                 <template slot-scope="scope">{{
                   formatTime(scope.row.createTime)
                 }}</template>
               </el-table-column>
-              <el-table-column label="审核意见" min-width="150">
+              <el-table-column
+                label="审核意见"
+                min-width="120"
+                show-overflow-tooltip
+              >
                 <template slot-scope="scope">{{
                   scope.row.approDesc || "无"
                 }}</template>
               </el-table-column>
               <el-table-column
                 label="操作"
-                width="150"
+                width="130"
                 align="center"
                 fixed="right"
               >
@@ -174,10 +201,10 @@
               <el-table-column
                 prop="id"
                 label="ID"
-                width="80"
+                width="70"
                 align="center"
               ></el-table-column>
-              <el-table-column label="封面" width="120" align="center">
+              <el-table-column label="封面" width="110" align="center">
                 <template slot-scope="scope">
                   <el-image
                     style="width: 80px; height: 50px; border-radius: 4px"
@@ -189,14 +216,30 @@
               <el-table-column
                 prop="name"
                 label="影视名称"
-                min-width="150"
+                min-width="120"
+                show-overflow-tooltip
+              ></el-table-column>
+              <!-- 新增字段：导演 -->
+              <el-table-column
+                prop="director"
+                label="导演"
+                width="100"
+                show-overflow-tooltip
               ></el-table-column>
               <el-table-column
                 prop="cid"
                 label="所属栏目"
-                width="120"
+                width="100"
                 align="center"
               ></el-table-column>
+              <!-- 新增字段：描述 -->
+              <el-table-column
+                prop="description"
+                label="影视描述"
+                min-width="150"
+                show-overflow-tooltip
+              ></el-table-column>
+
               <el-table-column label="状态" width="100" align="center">
                 <template slot-scope="scope">
                   <el-tag
@@ -240,6 +283,13 @@
           <el-input
             v-model="uploadForm.name"
             placeholder="请输入影视名称"
+          ></el-input>
+        </el-form-item>
+        <!-- 新增表单项：导演 -->
+        <el-form-item label="导演" required>
+          <el-input
+            v-model="uploadForm.director"
+            placeholder="请输入导演名称"
           ></el-input>
         </el-form-item>
         <el-form-item label="所属栏目" required>
@@ -339,16 +389,40 @@ export default {
       myVideosData: [],
       categories: [],
       uploadDialogVisible: false,
-      uploadForm: { name: "", cid: "", description: "", image: "", playId: "" },
+      // 增加 director 字段
+      uploadForm: {
+        name: "",
+        cid: "",
+        description: "",
+        image: "",
+        playId: "",
+        director: "",
+      },
     };
   },
   created() {
+    // 1. 检查是否存在 token
+    const token = this.getCookie("vue_admin_template_token");
+    if (!token) {
+      // 2. 如果没有 token，提示并跳转回首页
+      // alert("请先登录"); // 根据需求决定是否提示
+      this.$router.push("/index");
+      this.$message.warning("请先登录");
+      return; // 阻止后续逻辑执行
+    }
+    // 3. 已登录，执行原有逻辑
     this.getList();
     this.getCategories();
   },
   methods: {
+    // 获取 Cookie 的简单辅助函数
+    getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(";").shift();
+    },
     formatTime(timeStr) {
-      return timeStr ? timeStr.replace("T", " ") : "-";
+      return timeStr ? timeStr.replace("T", " ").substring(0, 16) : "-";
     },
 
     handleMenuSelect(index) {
@@ -368,17 +442,12 @@ export default {
     async getMyUploadedVideos() {
       this.loading = true;
       try {
-        // 1. 从 localStorage 获取用户名
         const username = localStorage.getItem("username");
-
-        // 2. 校验用户名是否存在
         if (!username) {
           this.$message.error("用户信息已失效，请重新登录");
           return;
         }
-        // 3. 传入 username 调用接口
         const res = await movieApi.showMyUploadVideo(username);
-
         if (res.code === 200 || res.code === 20000) {
           this.myVideosData = res.data || [];
         } else {
@@ -399,7 +468,7 @@ export default {
         const res = await movieApi.showApproveRecord(userId);
         if (res.code === 200 || res.code === 20000) {
           this.allTableData = res.data || [];
-          this.handleStatusFilter(); // 加载后应用当前筛选条件
+          this.handleStatusFilter();
         }
       } finally {
         this.loading = false;
@@ -418,7 +487,7 @@ export default {
 
     handleReset() {
       this.searchQuery.status = "";
-      this.handleStatusFilter(); // 重置后显示全部
+      this.handleStatusFilter();
       this.$message.success("已重置筛选条件");
     },
 
@@ -464,9 +533,12 @@ export default {
     },
 
     async submitUploadForm() {
-      const { name, cid, image, playId } = this.uploadForm;
-      if (!name || !cid || !image || !playId)
-        return this.$message.warning("请完善必填项！");
+      const { name, cid, image, playId, director } = this.uploadForm;
+      // 校验增加 director
+      if (!name || !cid || !image || !playId || !director)
+        return this.$message.warning(
+          "请完善必填项（名称、导演、栏目及文件）！"
+        );
 
       this.submitLoading = true;
       try {
@@ -487,12 +559,10 @@ export default {
     },
 
     goToDetail(row) {
-      // 逻辑修正：审批通过(PASS) 或者 isApproval 为 1 均视为通过
       const isPassed =
         row.approStatus === "PASS" || Number(row.isApproval) === 1;
       if (isPassed) {
         const videoId = row.videoId || row.id;
-        // 跳转到指定路径 /index/video/id
         this.$router.push(`/index/video/${videoId}`);
       } else {
         this.$message.warning("该视频尚未审核通过，暂不可预览！");
@@ -515,6 +585,7 @@ export default {
         description: "",
         image: "",
         playId: "",
+        director: "", // 重置导演字段
       };
       this.imageFileList = [];
       this.videoFileList = [];

@@ -41,11 +41,29 @@
           min-width="140"
           show-overflow-tooltip
         ></el-table-column>
+
+        <!-- 新增字段：导演 -->
         <el-table-column
-          prop="uploadBy"
-          label="上传人ID"
-          width="100"
+          prop="director"
+          label="导演"
+          width="120"
+          show-overflow-tooltip
+        ></el-table-column>
+
+        <!-- 新增字段：所属栏目 -->
+        <el-table-column
+          prop="cid"
+          label="栏目ID"
+          width="80"
           align="center"
+        ></el-table-column>
+
+        <!-- 新增字段：描述 -->
+        <el-table-column
+          prop="description"
+          label="影视简介"
+          min-width="180"
+          show-overflow-tooltip
         ></el-table-column>
 
         <el-table-column label="审核状态" width="120" align="center">
@@ -73,7 +91,7 @@
           }}</template>
         </el-table-column>
 
-        <el-table-column label="操作" width="220" align="center" fixed="right">
+        <el-table-column label="操作" width="180" align="center" fixed="right">
           <template slot-scope="scope">
             <div class="op-container">
               <template v-if="scope.row.approStatus === 'DOING'">
@@ -174,12 +192,11 @@ export default {
         await this.$confirm(`确定审核通过《${row.videoName}》吗？`, "提示", {
           type: "success",
         });
-        // 从 localStorage 获取 userId
         const userId = localStorage.getItem("userId");
         const res = await movieApi.doApproval({
           videoId: row.videoId,
           approStatus: "SUCC",
-          userId: userId, // 携带 userId 参数
+          userId: userId,
         });
         if (res.code === 200 || res.code === 20000) {
           this.$message.success("审核已通过");
@@ -192,36 +209,17 @@ export default {
       this.rejectForm = { videoId: row.videoId, approDesc: "" };
       this.rejectDialogVisible = true;
     },
-    async confirmReject() {
-      if (!this.rejectForm.approDesc.trim())
-        return this.$message.warning("请填写驳回原因");
-      this.submitLoading = true;
-      try {
-        // 从 localStorage 获取 userId
-        const userId = localStorage.getItem("userId");
-        const res = await movieApi.doApproval({
-          ...this.rejectForm,
-          approStatus: "FAIL",
-          userId: userId, // 携带 userId 参数
-        });
-        if (res.code === 200 || res.code === 20000) {
-          this.$message.success("已驳回申请");
-          this.rejectDialogVisible = false;
-          this.getList();
-        }
-      } finally {
-        this.submitLoading = false;
-      }
-    },
 
     async confirmReject() {
       if (!this.rejectForm.approDesc.trim())
         return this.$message.warning("请填写驳回原因");
       this.submitLoading = true;
       try {
+        const userId = localStorage.getItem("userId");
         const res = await movieApi.doApproval({
           ...this.rejectForm,
           approStatus: "FAIL",
+          userId: userId,
         });
         if (res.code === 200 || res.code === 20000) {
           this.$message.success("已驳回申请");
@@ -263,7 +261,6 @@ export default {
 
     handlePageChange(page) {
       this.currentPage = page;
-      // 若后端支持分页，请在此调用带参的 getList
     },
   },
 };

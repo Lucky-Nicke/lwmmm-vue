@@ -176,8 +176,12 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item label="作者/导演" prop="director">
-          <el-input v-model="sysMovie.director"></el-input>
+        <el-form-item label="作者/导演" prop="username">
+          <el-input
+            v-model="sysMovie.username"
+            placeholder="当前操作人"
+            disabled
+          />
         </el-form-item>
 
         <el-form-item label="封面图片" prop="image">
@@ -270,6 +274,10 @@ export default {
     const movieRules = {
       name: [{ required: true, message: "请输入影视名称", trigger: "blur" }],
       cid: [{ required: true, message: "请选择所属栏目", trigger: "change" }],
+      username: [
+        { required: true, message: "作者名不能为空", trigger: "change" },
+      ], // 修改这里
+
       image: [{ required: true, message: "请上传影视图片", trigger: "change" }],
       playId: [
         { required: true, message: "请上传影视文件", trigger: "change" },
@@ -367,8 +375,21 @@ export default {
 
     // --- 增删改逻辑 ---
     add() {
-      this.movieRules = this.movieRules; // 使用规则（必填）
-      this.sysMovie = {}; // 重置表单
+      // 1. 切换校验规则
+      this.movieRules = this.movieRules;
+
+      // 2. 获取缓存中的用户名
+      // 提示：如果你的 username 是存在 JSON 对象里的，记得 JSON.parse()
+      const currentUsername = localStorage.getItem("username") || "未知用户";
+      // 3. 重置并赋初始值
+      this.sysMovie = {
+        username: currentUsername, // 默认锁定当前登录人
+        name: "",
+        cid: "",
+        image: "",
+        playId: "",
+        description: "",
+      };
       this.dialogVisible = true;
       this.$nextTick(() => {
         if (this.$refs.dataForm) {

@@ -1,7 +1,13 @@
 <template>
   <div class="login-container">
-    <el-form ref="loginForm" :model="loginForm" :rules="loginRules" class="login-form" auto-complete="on" label-position="left">
-
+    <el-form
+      ref="loginForm"
+      :model="loginForm"
+      :rules="loginRules"
+      class="login-form"
+      auto-complete="on"
+      label-position="left"
+    >
       <div class="title-container">
         <h3 class="title">影视管理系统后台</h3>
       </div>
@@ -37,19 +43,26 @@
           @keyup.enter.native="handleLogin"
         />
         <span class="show-pwd" @click="showPwd">
-          <svg-icon :icon-class="passwordType === 'password' ? 'eye' : 'eye-open'" />
+          <svg-icon
+            :icon-class="passwordType === 'password' ? 'eye' : 'eye-open'"
+          />
         </span>
       </el-form-item>
 
-      <el-button :loading="loading" type="primary" style="width:100%;margin-bottom:20px;" @click.native.prevent="handleLogin">Login</el-button>
+      <el-button
+        :loading="loading"
+        type="primary"
+        style="width: 100%; margin-bottom: 20px"
+        @click.native.prevent="handleLogin"
+        >Login</el-button
+      >
 
-      <div class="tips" style="text-align: right; margin-top: 10px;">
+      <div class="tips" style="text-align: right; margin-top: 10px">
         <!-- 使用 router-link 进行跳转 -->
-        <router-link to="/reset-password" style="color: #eee; cursor: pointer;">
-          <span style="border-bottom: 1px solid #999;">忘记密码?</span>
+        <router-link to="/reset-password" style="color: #eee; cursor: pointer">
+          <span style="border-bottom: 1px solid #999">忘记密码?</span>
         </router-link>
       </div>
-
     </el-form>
 
     <!-- 版权脚注 -->
@@ -60,83 +73,114 @@
 </template>
 
 <script>
-import { validUsername } from '@/utils/validate'
+import { validUsername } from "@/utils/validate";
 
 export default {
-  name: 'Login',
+  name: "Login",
   data() {
     const validateUsername = (rule, value, callback) => {
       if (!validUsername(value)) {
-        callback()
+        callback();
       } else {
-        callback()
+        callback();
       }
-    }
+    };
     const validatePassword = (rule, value, callback) => {
       if (value.length < 6) {
-        callback(new Error('密码长度不能少于6位'))
+        callback(new Error("密码长度不能少于6位"));
       } else {
-        callback()
+        callback();
       }
-    }
+    };
     return {
       loginForm: {
-        username: 'admin',
-        password: '111111'
+        username: "admin",
+        password: "111111",
       },
       loginRules: {
-        username: [{ required: true, trigger: 'blur', validator: validateUsername }],
-        password: [{ required: true, trigger: 'blur', validator: validatePassword }]
+        username: [
+          { required: true, trigger: "blur", validator: validateUsername },
+        ],
+        password: [
+          { required: true, trigger: "blur", validator: validatePassword },
+        ],
       },
       loading: false,
-      passwordType: 'password',
-      redirect: undefined
-    }
+      passwordType: "password",
+      redirect: undefined,
+    };
   },
   watch: {
     $route: {
-      handler: function(route) {
-        this.redirect = route.query && route.query.redirect
+      handler: function (route) {
+        this.redirect = route.query && route.query.redirect;
       },
-      immediate: true
-    }
+      immediate: true,
+    },
   },
   methods: {
     showPwd() {
-      if (this.passwordType === 'password') {
-        this.passwordType = ''
+      if (this.passwordType === "password") {
+        this.passwordType = "";
       } else {
-        this.passwordType = 'password'
+        this.passwordType = "password";
       }
       this.$nextTick(() => {
-        this.$refs.password.focus()
-      })
+        this.$refs.password.focus();
+      });
     },
     handleLogin() {
-      this.$refs.loginForm.validate(valid => {
+      this.$refs.loginForm.validate((valid) => {
         if (valid) {
-          this.loading = true
-          this.$store.dispatch('user/login', this.loginForm).then(() => {
-            this.$router.push({ path: this.redirect || '/' })
-            this.loading = false
-          }).catch(() => {
-            this.loading = false
-          })
+          this.loading = true;
+          // 1. 先执行登录，拿到 Token
+          this.$store
+            .dispatch("user/login", this.loginForm)
+            .then(() => {
+              // 2. 登录成功后，立即调用获取用户信息的 action (假设是 user/getInfo)
+              // 这个 getInfo 接口返回的数据结构应包含你给出的 roles 数组
+              return this.$store.dispatch("user/getInfo");
+            })
+            .then((data) => {
+              // 这里的 data 就是你提供的那个 JSON 响应中的 data 部分
+              const { roles } = data;
+
+              // 3. 判断角色数组是否包含 'SYSTEM'
+              if (roles && roles.includes("SYSTEM")) {
+                // 是系统管理员，允许进入
+                this.loading = true;
+                this.$router.push({ path: this.redirect || "/" });
+                this.loading = false;
+              } else {
+                // 4. 不是系统管理员，强制登出并给出提示
+                this.$message.error(
+                  "由于您不是系统管理员，无法进入后台管理系统！"
+                );
+                // 这里建议触发一个 logout action 清理掉刚才存入的 token
+                this.$store.dispatch("user/logout").then(() => {
+                  this.loading = false;
+                });
+              }
+            })
+            .catch((error) => {
+              console.log(error);
+              this.loading = false;
+            });
         } else {
-          console.log('error submit!!')
-          return false
+          console.log("error submit!!");
+          return false;
         }
-      })
-    }
-  }
-}
+      });
+    },
+  },
+};
 </script>
 
 <style lang="scss">
 /* --- 核心修复：Global CSS --- */
 
 $cursor: #fff;
-$input_bg: transparent; 
+$input_bg: transparent;
 
 @supports (-webkit-mask: none) and (not (cater-color: $cursor)) {
   .login-container .el-input input {
@@ -150,7 +194,7 @@ $input_bg: transparent;
   .el-input {
     flex: 1; // 关键：让输入框自动填满除去图标外的剩余宽度
     width: auto; // 重置掉原来的固定宽度或百分比
-    
+
     input {
       background: $input_bg;
       border: 0px;
@@ -162,9 +206,9 @@ $input_bg: transparent;
       caret-color: $cursor;
 
       &:-webkit-autofill {
-        box-shadow: 0 0 0px 1000px rgba(0,0,0,0.2) inset !important; 
+        box-shadow: 0 0 0px 1000px rgba(0, 0, 0, 0.2) inset !important;
         -webkit-text-fill-color: $cursor !important;
-        transition: background-color 50000s ease-in-out 0s; 
+        transition: background-color 50000s ease-in-out 0s;
       }
     }
   }
@@ -175,7 +219,7 @@ $input_bg: transparent;
     background: rgba(0, 0, 0, 0.2);
     border-radius: 5px;
     color: #454545;
-    
+
     // 使用 Element UI 的深度选择器强制内容区 Flex 布局
     .el-form-item__content {
       display: flex !important;
@@ -191,34 +235,34 @@ $input_bg: transparent;
 <style lang="scss" scoped>
 /* --- 页面样式优化 --- */
 
-$bg:#2d3a4b;
-$dark_gray:#889aa4;
-$light_gray:#eee;
+$bg: #2d3a4b;
+$dark_gray: #889aa4;
+$light_gray: #eee;
 
 // --- 底部版权区域 ---
-  .footer {
-    position: absolute;
-    bottom: 20px;
-    width: 100%;
-    text-align: center;
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 15px;
-    letter-spacing: 1px;
-    
-    p {
-      margin: 0;
-    }
+.footer {
+  position: absolute;
+  bottom: 20px;
+  width: 100%;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 15px;
+  letter-spacing: 1px;
+
+  p {
+    margin: 0;
   }
+}
 
 .login-container {
   min-height: 100vh;
   width: 100%;
-  
+
   background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   background-size: cover;
   background-position: center;
   overflow: hidden;
-  
+
   display: flex;
   align-items: center;
   justify-content: center;
@@ -227,23 +271,23 @@ $light_gray:#eee;
     position: relative;
     width: 450px;
     max-width: 100%;
-    
-    background: rgba(255, 255, 255, 0.1); 
-    backdrop-filter: blur(10px);          
-    -webkit-backdrop-filter: blur(10px);  
-    border-radius: 16px; 
-    border: 1px solid rgba(255, 255, 255, 0.2); 
-    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37); 
-    
+
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+
     padding: 40px 35px;
-    margin: 0; 
+    margin: 0;
   }
 
   .tips {
     font-size: 14px;
-    color: #ddd; 
+    color: #ddd;
     margin-bottom: 10px;
-    text-align: center; 
+    text-align: center;
 
     span {
       &:first-of-type {
@@ -272,7 +316,7 @@ $light_gray:#eee;
       text-align: center;
       font-weight: 600;
       letter-spacing: 2px;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
   }
 
@@ -281,7 +325,7 @@ $light_gray:#eee;
     position: absolute;
     right: 10px;
     // top: 7px;  // 删掉 top，用 Flex 下的自动居中或者 transform
-    top: 50%;     // 设为 50%
+    top: 50%; // 设为 50%
     transform: translateY(-50%); // 向上偏移一半，绝对垂直居中
     font-size: 16px;
     color: $dark_gray;
@@ -291,25 +335,25 @@ $light_gray:#eee;
     display: flex;
     align-items: center; // 内部图标居中
   }
-  
+
   ::v-deep .el-form-item {
-    background: rgba(0, 0, 0, 0.2); 
+    background: rgba(0, 0, 0, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px; 
-    margin-bottom: 22px; 
+    border-radius: 8px;
+    margin-bottom: 22px;
   }
 
   ::v-deep .el-button--primary {
-    background: linear-gradient(90deg, #00d2ff 0%, #3a7bd5 100%); 
+    background: linear-gradient(90deg, #00d2ff 0%, #3a7bd5 100%);
     border: none;
     height: 45px;
     font-size: 16px;
     border-radius: 8px;
     transition: all 0.3s;
-    
+
     &:hover {
-        transform: scale(1.02); 
-        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+      transform: scale(1.02);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
     }
   }
 }
