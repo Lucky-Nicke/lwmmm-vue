@@ -568,9 +568,10 @@ export default {
   methods: {
     // 1. 页面加载时检查登录状态并同步本地存储
     checkLoginStatus() {
-      const token = getToken();
-      if (token) {
-        getInfo(token)
+      // 从 localStorage 获取用户名（如果存在）
+      const username = localStorage.getItem("username");
+      if (username) {
+        getInfo(username)
           .then((res) => {
             if (res.code === 200 && res.data) {
               this.userInfo.avatar = res.data.avatar;
@@ -766,47 +767,71 @@ export default {
       this.$refs.loginForm.validate((valid) => {
         if (valid) {
           this.loading = true;
+
+          // 1. 调用登录接口
           login(this.loginForm)
             .then((res) => {
               const code = res.code || (res.data && res.data.code);
               if (code === 200) {
                 const token = res.data.token || res.token || "";
-                if (token) setToken(token);
-                return getInfo(token);
+                if (token) {
+                  setToken(token); // 存储 Token
+                }
+                // 【关键改动】：不要从 localStorage 拿，因为还没存进去
+                // 直接从登录表单对象里拿当时填写的用户名
+                const username = this.loginForm.username;
+                console.log("登录成功，正在获取用户信息，username:", username);
+
+                // 返回 getInfo 的 Promise
+                return getInfo(username);
               } else {
-                this.$message.error(
-                  res.message || "登录失败，请检查账号密码！"
-                );
-                return Promise.reject(res.message);
+                // 如果业务 code 不对，抛出错误进入 catch
+                throw new Error(res.message || "登录失败，请检查账号密码！");
               }
             })
             .then((infoRes) => {
+              // 2. 处理 getInfo 的返回结果
               if (infoRes.code === 200 && infoRes.data) {
-                this.userInfo.avatar = infoRes.data.avatar;
+                const userData = infoRes.data;
+                const roles = userData.roles || [];
+                // --- 权限判断：如果不是 SYSTEM 角色，拒绝进入 ---
+                if (!roles.includes("SYSTEM")) {
+                  this.$message.error(
+                    "由于您不是系统管理员，无法进入后台管理系统！"
+                  );
+                  this.clearLocalUserData(); // 清理掉刚才存的 token
+                  return; // 结束流程
+                }
+                // --- 存储用户信息 ---
+                this.userInfo.avatar = userData.avatar;
+                localStorage.setItem("userId", userData.userId);
+                localStorage.setItem("username", userData.username);
 
-                // --- 新增：登录成功存入 localStorage ---
-                localStorage.setItem("userId", infoRes.data.userId);
-                localStorage.setItem("username", infoRes.data.username);
-                // ------------------------------------
                 this.$message.success("登录成功！");
                 this.isLogin = true;
                 this.authVisible = false;
+
+                // 触发全局登录成功事件
                 this.$root.$emit("on-user-login-success");
+
+                // 如果有跳转需求，可以在这执行：this.$router.push('/')
               } else {
                 this.$message.warning("登录成功但获取用户信息失败！");
                 this.clearLocalUserData();
-                this.isLogin = false;
-                this.authVisible = false;
               }
             })
             .catch((error) => {
-              if (!error || typeof error === "string") {
-                this.$message.error(error || "登录请求异常，请稍后重试！");
-              }
+              // 3. 统一错误处理
+              console.error("Login Process Error:", error);
+              const msg =
+                error.message || error || "登录请求异常，请稍后重试！";
+              this.$message.error(msg);
             })
             .finally(() => {
               this.loading = false;
             });
+        } else {
+          return false;
         }
       });
     },

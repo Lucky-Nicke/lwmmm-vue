@@ -330,9 +330,8 @@ export default {
     // 1. 获取用户信息
     async fetchUserInfo() {
       try {
-        const token = this.$store.getters.token;
-        const res = await getLessInfo(token);
-
+        const userId = localStorage.getItem("userId");
+        const res = await getLessInfo(userId);
         if (res.code === 200 && res.data) {
           const data = res.data;
           this.userInfo = {
@@ -348,7 +347,7 @@ export default {
       }
     },
 
-    // 【新增】2. 修改用户信息
+    // 2. 修改用户信息
     async handleUpdateUser() {
       this.updatingUser = true;
       try {
@@ -374,7 +373,7 @@ export default {
       }
     },
 
-    // 【新增】3. 修改密码
+    // 3. 修改密码
     handleResetPwd() {
       this.$refs.pwdFormRef.validate(async (valid) => {
         if (valid) {
@@ -409,7 +408,7 @@ export default {
       });
     },
 
-    // 【新增】4. 跳转到视频详情页
+    // 4. 跳转到视频详情页
     goToVideoDetail(video) {
       // 兼容判断：日志接口可能返回的是 videoId 或者是 id
       const targetId = video.videoId || video.id;
@@ -427,7 +426,9 @@ export default {
 
     async fetchWatchLog() {
       try {
-        const res = await userApi.userWatchLog();
+        // 从 localStorage 获取用户ID
+        const userId = localStorage.getItem("userId");
+        const res = await userApi.userWatchLog(userId);
         let dataList = res.data || res;
         if (Array.isArray(dataList)) {
           this.historyList = dataList;
@@ -441,7 +442,9 @@ export default {
 
     async fetchLikeLog() {
       try {
-        const res = await userApi.userLikeLog();
+        // 从 localStorage 获取用户ID
+        const userId = localStorage.getItem("userId");
+        const res = await userApi.userLikeLog(userId);
         let dataList = res.data || res;
         if (Array.isArray(dataList)) {
           this.likesList = dataList;

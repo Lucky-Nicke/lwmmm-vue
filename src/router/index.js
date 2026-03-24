@@ -158,7 +158,7 @@ export const constantRoutes = [
       {
         // 完整路径就是 /log/sysMovie/:id
         path: 'sysMovie/:id',
-        name: 'VideoDetail',
+        name: 'VideoDetail2',
         component: VideoDetail,
         meta: {
           title: '视频详情',
@@ -228,6 +228,7 @@ const router = createRouter()
 export function resetRouter() {
   const newRouter = createRouter()
   router.matcher = newRouter.matcher // reset router
+  router.options.routes = newRouter.options.routes
 }
 
 export default router

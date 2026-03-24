@@ -126,6 +126,15 @@
                     @click="showReplyBox(rootComment)"
                     >回复</span
                   >
+                  <!-- 删除按钮 (仅自己的评论可见) -->
+                  <span
+                    class="action delete-btn"
+                    v-if="isMyComment(rootComment.userId)"
+                    @click="handleDeleteComment(rootComment.id)"
+                    style="color: #f56c6c; margin-left: 10px"
+                  >
+                    删除
+                  </span>
                 </div>
 
                 <div
@@ -196,6 +205,15 @@
                           @click="showReplyBox(child, rootComment.id)"
                           >回复</span
                         >
+                        <!-- 删除按钮 (仅自己的评论可见) -->
+                        <span
+                          class="action delete-btn"
+                          v-if="isMyComment(child.userId)"
+                          @click="handleDeleteComment(child.id)"
+                          style="color: #f56c6c; margin-left: 10px"
+                        >
+                          删除
+                        </span>
                       </div>
 
                       <div
@@ -308,9 +326,9 @@
 </template>
 
 <script>
-import { getMovieDetail } from "@/api/date/date.js";
+import { getMovieDetail, removeComment } from "@/api/date/date.js";
 import movieApi from "@/api/movie/movie.js";
-import { getLessInfo } from "@/api/user.js";
+// 【新增】导入删除评论接口（请确认路径是否正确）
 import { getToken } from "@/utils/auth";
 
 export default {
@@ -367,6 +385,59 @@ export default {
     },
   },
   methods: {
+    // 1. 根据 localStorage 的 userid 判断是否是自己的评论
+    isMyComment(commentUserId) {
+      if (!commentUserId) return false;
+
+      // 使用你 computed 里的 currentUserId (它结合了 Vuex 和 localStorage)
+      const localUserId = this.currentUserId;
+      if (!localUserId) return false;
+
+      // 处理后端返回的数据，兼容数字或 "用户:123" 这种格式
+      let cId = String(commentUserId);
+      if (cId.includes(":")) {
+        cId = cId.split(":")[1]; // 把 "用户:123" 截取成 "123"
+      }
+
+      // 【关键】打印出来看看，到底哪里对不上！
+      console.log(
+        "该条评论的用户ID:",
+        cId,
+        " | 当前登录的用户ID:",
+        localUserId
+      );
+
+      // 将两边都转为字符串比较，防止 1 !== "1"
+      return String(cId) === String(localUserId);
+    },
+
+    // 2. 删除评论逻辑（带二次确认与刷新）
+    handleDeleteComment(commentId) {
+      this.$confirm("确定要删除这条评论吗？", "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      })
+        .then(() => {
+          // 调用你提供的删除接口
+          removeComment(commentId)
+            .then((res) => {
+              if (res.code === 200) {
+                this.$message.success("删除成功");
+                this.initData(); // 刷新当前页面评论数据
+              } else {
+                this.$message.error(res.msg || "删除失败");
+              }
+            })
+            .catch(() => {
+              this.$message.error("删除请求异常");
+            });
+        })
+        .catch(() => {
+          // 用户点击取消
+        });
+    },
+
     checkIsLogin() {
       const hasToken = this.$store.getters.token || getToken();
       return !!hasToken;
@@ -380,13 +451,11 @@ export default {
       this.$router.push({ name: "VideoDetail", params: { id } });
     },
     fetchUserInfo() {
-      const token = getToken();
-      if (token) {
-        getLessInfo(token).then((res) => {
-          if (res.code === 200 && res.data) {
-            this.remoteUserId = res.data.id;
-          }
-        });
+      // 兼容获取 localStorage 中的 userid 或 userId
+      const userId =
+        localStorage.getItem("userid") || localStorage.getItem("userId");
+      if (userId) {
+        this.remoteUserId = userId;
       }
     },
     sendDanmaku() {
@@ -768,11 +837,6 @@ export default {
         extractChildren(root.children);
         return { ...root, flatChildren };
       });
-    },
-
-    goToVideoDetail(id) {
-      if (!id) return;
-      this.$router.push({ name: "VideoDetail", params: { id } });
     },
   },
 };

@@ -8,23 +8,18 @@ export function login(data) {
   })
 }
 
-export function getInfo(token) {
+export function getInfo(username) {
   return request({
     url: '/admin/system/index/info',
     method: 'get',
-    headers: {
-      token: token 
-    }
+    params: { username }
   })
 }
 
-export function getLessInfo(token) {
+export function getLessInfo(userId) {
   return request({
-    url: '/admin/system/sysUser/info',
-    method: 'get',
-    headers: {
-      token: token 
-    }
+    url: `/admin/system/sysUser/info/${userId}`,
+    method: 'get'
   })
 }
 

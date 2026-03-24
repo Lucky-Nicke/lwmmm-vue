@@ -81,18 +81,20 @@ export default {
     },
 
     // 查询用户观看记录
-    userWatchLog() {
+    userWatchLog(userId) {
         return request({
             url: `${BASE_URL}/userWatchLog`, // 你的接口地址
             method: 'get',
+            params: { userId }
         })
     },
-    
+
     // 查询用户点赞列表
-    userLikeLog() {
+    userLikeLog(userId) {
         return request({
             url: `${BASE_URL}/userLikeLog`, // 你的接口地址
             method: 'get',
+            params: { userId }
         })
     },
 }
