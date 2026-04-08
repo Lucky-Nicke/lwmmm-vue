@@ -9,7 +9,8 @@ const getDefaultState = () => {
     avatar: '',
 
     buttons: [],
-    menus: ''
+    menus: '',
+    asyncRoutes: []
   }
 }
 
@@ -34,6 +35,9 @@ const mutations = {
   // 新增
   SET_MENUS: (state, menus) => {
     state.menus = menus
+  },
+  SET_ASYNC_ROUTES: (state, routes) => {
+    state.asyncRoutes = routes
   }
 }
 
@@ -45,7 +49,9 @@ const actions = {
       login({ username: username.trim(), password: password }).then(response => {
         const { data } = response
         commit('SET_TOKEN', data.token)
+        commit('SET_NAME', username.trim())
         setToken(data.token)
+        localStorage.setItem('username', username.trim())
         resolve()
       }).catch(error => {
         reject(error)
@@ -84,7 +90,8 @@ const actions = {
   logout({ commit, state }) {
     return new Promise((resolve, reject) => {
       logout(state.token).then(() => {
-        removeToken() // must remove  token  first
+        removeToken()
+        localStorage.removeItem('username')
         resetRouter()
         commit('RESET_STATE')
         resolve()

@@ -380,25 +380,22 @@ export default {
           this.updatingPwd = true;
           try {
             const payload = {
-              username: this.userInfo.username, // 从页面拿的用户名
+              username: this.userInfo.username,
               oldPwd: this.pwdForm.oldPwd,
               newPwd: this.pwdForm.newPwd,
             };
-
             const res = await resetPassword(payload);
             if (res.code === 200) {
               this.$message.success("密码修改成功!");
-              this.$refs.pwdFormRef.resetFields(); // 清空表单
-
-              // 修改密码后通常需要退出登录
-              // setTimeout(() => {
-              //   this.$store.dispatch('user/logout').then(() => {
-              //     this.$router.push('/login');
-              //   });
-              // }, 1500);
+              this.$refs.pwdFormRef.resetFields();
+            } else if (res.code === 201) {
+              this.$message.error("用户名或密码错误，请重新输入！");
+            } else {
+              this.$message.error(res.message || "修改失败，请稍后重试");
             }
           } catch (error) {
-            console.error("密码修改异常", error);
+            // 拦截器将 201 reject 时走这里
+            this.$message.error("用户名或密码错误，请重新输入！");
           } finally {
             this.updatingPwd = false;
           }

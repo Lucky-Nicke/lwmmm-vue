@@ -93,7 +93,9 @@
         <!-- 传递参数 'confirm' -->
         <span class="show-pwd" @click="showPwd('confirm')">
           <svg-icon
-            :icon-class="passwordTypeConfirm === 'password' ? 'eye' : 'eye-open'"
+            :icon-class="
+              passwordTypeConfirm === 'password' ? 'eye' : 'eye-open'
+            "
           />
         </span>
       </el-form-item>
@@ -172,69 +174,69 @@ export default {
         ],
       },
       loading: false,
-      passwordTypeOld: 'password',
-      passwordTypeNew: 'password',
-      passwordTypeConfirm: 'password'
+      passwordTypeOld: "password",
+      passwordTypeNew: "password",
+      passwordTypeConfirm: "password",
     };
   },
   methods: {
-     showPwd(type) {
-      if (type === 'old') {
-        this.passwordTypeOld = this.passwordTypeOld === 'password' ? '' : 'password'
-        this.$nextTick(() => { this.$refs.oldPassword.focus() })
-      } else if (type === 'new') {
-        this.passwordTypeNew = this.passwordTypeNew === 'password' ? '' : 'password'
-        this.$nextTick(() => { this.$refs.newPassword.focus() })
-      } else if (type === 'confirm') {
-        this.passwordTypeConfirm = this.passwordTypeConfirm === 'password' ? '' : 'password'
-        this.$nextTick(() => { this.$refs.confirmPassword.focus() })
+    showPwd(type) {
+      if (type === "old") {
+        this.passwordTypeOld =
+          this.passwordTypeOld === "password" ? "" : "password";
+        this.$nextTick(() => {
+          this.$refs.oldPassword.focus();
+        });
+      } else if (type === "new") {
+        this.passwordTypeNew =
+          this.passwordTypeNew === "password" ? "" : "password";
+        this.$nextTick(() => {
+          this.$refs.newPassword.focus();
+        });
+      } else if (type === "confirm") {
+        this.passwordTypeConfirm =
+          this.passwordTypeConfirm === "password" ? "" : "password";
+        this.$nextTick(() => {
+          this.$refs.confirmPassword.focus();
+        });
       }
     },
 
     // --- 核心修改在这里 ---
     handleReset() {
-      console.log("按钮点击成功！开始校验...");
-
       this.$refs.resetForm.validate((valid) => {
         if (valid) {
-          console.log("校验通过，准备发送请求...");
           this.loading = true;
-
           const queryParams = {
             username: this.resetForm.username,
             oldPwd: this.resetForm.oldPassword,
             newPwd: this.resetForm.newPassword,
           };
-
-          // 2. 直接在这里发起请求，不再引用外部文件
-          // 这样能 100% 避开 export/import 的兼容性问题
           request({
             url: "/admin/system/index/changePwd",
             method: "post",
             data: queryParams,
           })
             .then((response) => {
-              console.log("接口返回成功:", response);
-              this.loading = false;
-
-              // 根据你的后端返回结构判断
               if (response.code === 200) {
-                this.$message.success(
-                  response.message || "密码修改成功!"
-                );
+                this.$message.success("密码修改成功!");
                 setTimeout(() => {
                   this.$router.push("/login");
                 }, 1500);
+              } else if (response.code === 201) {
+                this.$message.error("用户名或密码错误，请重新输入！");
               } else {
                 this.$message.error(response.message || "修改失败");
               }
             })
-            .catch((error) => {
-              console.error("接口请求失败:", error);
+            .catch(() => {
+              // 拦截器将 201 当作错误 reject 时走这里
+              this.$message.error("用户名或密码错误，请重新输入！");
+            })
+            .finally(() => {
               this.loading = false;
             });
         } else {
-          console.log("前端校验未通过");
           return false;
         }
       });

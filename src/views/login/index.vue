@@ -133,41 +133,31 @@ export default {
       this.$refs.loginForm.validate((valid) => {
         if (valid) {
           this.loading = true;
-          // 1. 先执行登录，拿到 Token
           this.$store
             .dispatch("user/login", this.loginForm)
             .then(() => {
-              // 2. 登录成功后，立即调用获取用户信息的 action (假设是 user/getInfo)
-              // 这个 getInfo 接口返回的数据结构应包含你给出的 roles 数组
               return this.$store.dispatch("user/getInfo");
             })
             .then((data) => {
-              // 这里的 data 就是你提供的那个 JSON 响应中的 data 部分
               const { roles } = data;
-
-              // 3. 判断角色数组是否包含 'SYSTEM'
-              if (roles && roles.includes("SYSTEM")) {
-                // 是系统管理员，允许进入
-                this.loading = true;
+              if (roles && !roles.includes("USER")) {
+                this.$message.success("登录成功！");
                 this.$router.push({ path: this.redirect || "/" });
-                this.loading = false;
               } else {
-                // 4. 不是系统管理员，强制登出并给出提示
                 this.$message.error(
                   "由于您不是系统管理员，无法进入后台管理系统！"
                 );
-                // 这里建议触发一个 logout action 清理掉刚才存入的 token
                 this.$store.dispatch("user/logout").then(() => {
                   this.loading = false;
                 });
               }
             })
             .catch((error) => {
-              console.log(error);
+              // axios 拦截器 reject 掉的错误都走这里
+              this.$message.error("用户名或密码错误，请重新输入！");
               this.loading = false;
             });
         } else {
-          console.log("error submit!!");
           return false;
         }
       });

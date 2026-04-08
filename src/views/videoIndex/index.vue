@@ -419,6 +419,7 @@ import {
   logout,
   resetPassword,
   getInfo,
+  getLessInfo,
   registerUser,
 } from "@/api/user";
 
@@ -568,25 +569,20 @@ export default {
   methods: {
     // 1. 页面加载时检查登录状态并同步本地存储
     checkLoginStatus() {
-      // 从 localStorage 获取用户名（如果存在）
-      const username = localStorage.getItem("username");
-      if (username) {
-        getInfo(username)
+      const token = getToken();
+      const userId = localStorage.getItem("userId");
+      if (token && userId) {
+        getLessInfo(userId)
           .then((res) => {
             if (res.code === 200 && res.data) {
-              this.userInfo.avatar = res.data.avatar;
+              this.userInfo.avatar = res.data.avatar || "";
               this.isLogin = true;
-              // --- 新增：存储到 localStorage ---
-              localStorage.setItem("userId", res.data.userId);
-              localStorage.setItem("username", res.data.username);
-              // ------------------------------
             } else {
-              this.clearLocalUserData(); // 清理
               this.isLogin = false;
             }
           })
           .catch(() => {
-            this.clearLocalUserData(); // 清理
+            // 接口失败不删 token，只标记未登录
             this.isLogin = false;
           });
       }
@@ -767,64 +763,39 @@ export default {
       this.$refs.loginForm.validate((valid) => {
         if (valid) {
           this.loading = true;
-
-          // 1. 调用登录接口
           login(this.loginForm)
             .then((res) => {
-              const code = res.code || (res.data && res.data.code);
-              if (code === 200) {
-                const token = res.data.token || res.token || "";
-                if (token) {
-                  setToken(token); // 存储 Token
-                }
-                // 【关键改动】：不要从 localStorage 拿，因为还没存进去
-                // 直接从登录表单对象里拿当时填写的用户名
-                const username = this.loginForm.username;
-                console.log("登录成功，正在获取用户信息，username:", username);
-
-                // 返回 getInfo 的 Promise
-                return getInfo(username);
+              if (res.code === 200) {
+                const token = res.data.token || "";
+                if (token) setToken(token);
+                return getInfo(this.loginForm.username);
               } else {
-                // 如果业务 code 不对，抛出错误进入 catch
-                throw new Error(res.message || "登录失败，请检查账号密码！");
+                this.$message.error(res.message || "用户名或密码错误");
+                return Promise.reject({ handled: true });
               }
             })
-            .then((infoRes) => {
-              // 2. 处理 getInfo 的返回结果
-              if (infoRes.code === 200 && infoRes.data) {
-                const userData = infoRes.data;
-                const roles = userData.roles || [];
-                // --- 权限判断：如果不是 SYSTEM 角色，拒绝进入 ---
-                if (!roles.includes("SYSTEM")) {
-                  this.$message.error(
-                    "由于您不是系统管理员，无法进入后台管理系统！"
-                  );
-                  this.clearLocalUserData(); // 清理掉刚才存的 token
-                  return; // 结束流程
-                }
-                // --- 存储用户信息 ---
-                this.userInfo.avatar = userData.avatar;
-                localStorage.setItem("userId", userData.userId);
-                localStorage.setItem("username", userData.username);
-
-                this.$message.success("登录成功！");
+            .then((res) => {
+              if (res.code === 200 && res.data) {
+                this.userInfo.avatar = res.data.avatar || "";
                 this.isLogin = true;
+                localStorage.setItem("userId", res.data.userId);
+                localStorage.setItem(
+                  "username",
+                  res.data.name || res.data.username || this.loginForm.username
+                );
                 this.authVisible = false;
-
-                // 触发全局登录成功事件
-                this.$root.$emit("on-user-login-success");
-
-                // 如果有跳转需求，可以在这执行：this.$router.push('/')
+                this.$message.success("登录成功！");
               } else {
-                this.$message.warning("登录成功但获取用户信息失败！");
-                this.clearLocalUserData();
+                this.$message.error(res.message || "获取用户信息失败");
+                return Promise.reject({ handled: true });
               }
             })
             .catch((error) => {
-              // 3. 统一错误处理
-              console.error("Login Process Error:", error);
+              if (error && error.handled) return;
               const msg =
-                error.message || error || "登录请求异常，请稍后重试！";
+                error.message && error.message.includes("禁用")
+                  ? error.message
+                  : "用户名或密码错误";
               this.$message.error(msg);
             })
             .finally(() => {
@@ -882,11 +853,15 @@ export default {
               if (code === 200) {
                 this.$message.success("密码修改成功!");
                 this.switchView("login");
+              } else if (code === 201) {
+                this.$message.error("用户名或密码错误，请重新输入！");
               } else {
-                this.$message.error(
-                  res.message || "修改失败，请检查旧密码是否正确"
-                );
+                this.$message.error("修改失败，请检查旧密码是否正确");
               }
+            })
+            .catch((error) => {
+              // 拦截器将 201 当作错误 reject 时走这里
+              this.$message.error("用户名或密码错误，请重新输入！");
             })
             .finally(() => {
               this.loading = false;

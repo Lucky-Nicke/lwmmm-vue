@@ -39,12 +39,16 @@ router.beforeEach(async (to, from, next) => {
       NProgress.done()
     } else {
       const hasGetUserInfo = store.getters.name
+      const hasAsyncRoutes = store.getters.asyncRoutes && store.getters.asyncRoutes.length > 0
 
-      if (hasGetUserInfo) {
+      if (hasGetUserInfo && hasAsyncRoutes) {
         next()
       } else {
         try {
-          await store.dispatch('user/getInfo')
+          // 如果已有用户信息，直接用 store 里的 menus，不重复请求
+          if (!hasGetUserInfo) {
+            await store.dispatch('user/getInfo')
+          }
 
           const menus = store.getters.menus || []
 
@@ -57,20 +61,15 @@ router.beforeEach(async (to, from, next) => {
             ])
 
             global.antRouter = accessRoutes
+            store.commit('user/SET_ASYNC_ROUTES', accessRoutes)
 
             next({ ...to, replace: true })
           } else {
-            // ❗没有菜单，不要乱跳 dashboard
             next()
           }
 
         } catch (error) {
           console.log('getInfo error:', error)
-
-          // ❗关键修改：不要强制踢登录
-          // await store.dispatch('user/resetToken')
-
-          // 👉 直接放行（否则你门户永远进不去）
           next()
         }
       }
@@ -86,18 +85,19 @@ router.afterEach(() => { // finish progress bar
   NProgress.done()
 }) // // 遍历后台传来的路由字符串，转换为组件对象
 function filterAsyncRouter(asyncRouterMap) {
-  const accessedRouters = asyncRouterMap.filter(route => {
+  return asyncRouterMap.map(rawRoute => {
+    const route = Object.assign({}, rawRoute)
     if (route.component) {
       if (route.component === 'Layout') {
         route.component = Layout
       } else if (route.component === 'ParentView') {
         route.component = ParentView
-      } else {
+      } else if (typeof route.component === 'string') {
         try {
-          route.component = _import(route.component)// 导入组件
+          route.component = _import(route.component)
         } catch (error) {
           console.log(error)
-          route.component = _import('dashboard/index')// 导入组件
+          route.component = _import('dashboard/index')
         }
       }
     }
@@ -106,7 +106,6 @@ function filterAsyncRouter(asyncRouterMap) {
     } else {
       delete route.children
     }
-    return true
+    return route
   })
-  return accessedRouters
 }
