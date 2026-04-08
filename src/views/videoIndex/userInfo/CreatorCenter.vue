@@ -286,11 +286,8 @@
           ></el-input>
         </el-form-item>
         <!-- 新增表单项：导演 -->
-        <el-form-item label="导演" required>
-          <el-input
-            v-model="uploadForm.director"
-            placeholder="请输入导演名称"
-          ></el-input>
+        <el-form-item label="作者" required>
+          <el-input v-model="uploadForm.director" disabled></el-input>
         </el-form-item>
         <el-form-item label="所属栏目" required>
           <el-select
@@ -570,8 +567,10 @@ export default {
     },
 
     openUploadDialog() {
+      this.uploadForm.director = localStorage.getItem("username") || "";
       this.uploadDialogVisible = true;
     },
+    
     handleImageRemove() {
       this.uploadForm.image = "";
     },

@@ -58,6 +58,22 @@
               video.category || "默认分类"
             }}</span>
           </div>
+          <!-- 视频简介 -->
+          <div class="video-desc-wrap" v-if="video.description">
+            <div
+              class="video-desc"
+              ref="descRef"
+              :class="{ 'is-expanded': descExpanded }"
+            >
+              {{ video.description }}
+            </div>
+            <span
+              class="desc-toggle"
+              v-if="isDescOverflow"
+              @click="descExpanded = !descExpanded"
+              >{{ descExpanded ? "收起 ▲" : "展开 ▼" }}</span
+            >
+          </div>
           <div class="video-actions">
             <el-button
               size="medium"
@@ -336,6 +352,8 @@ export default {
   data() {
     return {
       remoteUserId: null,
+      descExpanded: false,
+      isDescOverflow: false,
       videoId: null,
       shareDialogVisible: false,
       loading: true,
@@ -359,6 +377,14 @@ export default {
   computed: {
     currentUserId() {
       return this.$store.getters.id || this.remoteUserId || null;
+    },
+    checkDescOverflow() {
+      this.$nextTick(() => {
+        const el = this.$refs.descRef;
+        if (el) {
+          this.isDescOverflow = el.scrollHeight > el.clientHeight;
+        }
+      });
     },
   },
   created() {
@@ -497,7 +523,7 @@ export default {
             this.sortedDanmakuList.push(newDanmaku);
             this.sortedDanmakuList.sort((a, b) => a.playTime - b.playTime);
 
-            // 3. 【关键修复】更新弹幕指针 danmakuIndex
+            // 3. 更新弹幕指针 danmakuIndex
             // 找到下一个播放时间严格"大于"当前时间的弹幕索引，跳过刚才发的那条
             this.danmakuIndex = this.sortedDanmakuList.findIndex(
               (d) => d.playTime > currentTime
@@ -688,11 +714,14 @@ export default {
 
     initData() {
       this.loading = true;
-      Promise.all([getMovieDetail(this.videoId), movieApi.getHotVideoInfo()])
-        .then(([detailRes, hotRes]) => {
+      Promise.allSettled([
+        getMovieDetail(this.videoId),
+        movieApi.getHotVideoInfo(),
+      ]).then(([detailResult, hotResult]) => {
+        // 处理视频详情
+        if (detailResult.status === "fulfilled") {
+          const detailRes = detailResult.value;
           const vData = detailRes.data ? detailRes.data : detailRes;
-          const hData = hotRes.data ? hotRes.data : hotRes;
-
           if (
             (detailRes.code === 200 && detailRes.data) ||
             vData.videoId ||
@@ -706,23 +735,35 @@ export default {
                   )
                 : [];
             this.danmakuIndex = 0;
+            this.descExpanded = false;
+            this.isDescOverflow = false;
             this.processedComments = this.formatComments(
               this.video.commentList || []
             );
-            this.$nextTick(() => this.initAliPlayer());
+            this.$nextTick(() => {
+              this.initAliPlayer();
+              this.checkDescOverflow();
+            });
           } else {
             this.$message.error("获取视频详情失败");
           }
-
+        } else {
+          console.error("视频详情请求失败:", detailResult.reason);
+          this.$message.error("获取视频详情失败");
+        }
+        // 处理热门视频
+        if (hotResult.status === "fulfilled") {
+          const hotRes = hotResult.value;
+          console.log("hotRes 原始数据:", hotRes); // 先看看返回的是什么
+          const hData = hotRes.data ? hotRes.data : hotRes;
           if ((hotRes.code === 200 && hotRes.data) || Array.isArray(hData)) {
             this.hotVideos = hData;
           }
-          this.loading = false;
-        })
-        .catch((err) => {
-          console.error("加载异常:", err);
-          this.loading = false;
-        });
+        } else {
+          console.error("热门视频请求失败:", hotResult.reason);
+        }
+        this.loading = false;
+      });
     },
 
     initAliPlayer() {
@@ -843,6 +884,34 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.video-desc-wrap {
+  margin-bottom: 14px;
+}
+.video-desc {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.7;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-all;
+}
+.video-desc.is-expanded {
+  display: block;
+  overflow: visible;
+}
+.desc-toggle {
+  display: inline-block;
+  margin-top: 5px;
+  font-size: 12px;
+  color: #00a1d6;
+  cursor: pointer;
+  user-select: none;
+}
+.desc-toggle:hover {
+  text-decoration: underline;
+}
 .floating-tools {
   position: fixed;
   right: 30px;
