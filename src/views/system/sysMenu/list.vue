@@ -9,7 +9,7 @@
     
     <el-table
       :data="sysMenuList"
-      style="width: 100%; margin-bottom: 20px; margin-top: 10px"
+      style="width: 100%; margin-top: 10px"
       row-key="id"
       border
       :default-expand-all="false"

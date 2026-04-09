@@ -15,11 +15,11 @@
         <!-- 左侧：视频封面/预览 -->
         <el-col :span="6">
           <div class="video-thumb-wrapper">
-            <el-image
+            <cached-image
               :src="videoInfo.cover"
               fit="cover"
               class="video-cover"
-            ></el-image>
+            ></cached-image>
           </div>
         </el-col>
 

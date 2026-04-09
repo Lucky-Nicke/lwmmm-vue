@@ -414,6 +414,7 @@
 import categoryApi from "@/api/category/category";
 import { setToken, removeToken, getToken } from "@/utils/auth";
 import movieApi from "@/api/movie/movie";
+import { getCachedImg } from "@/utils/imgCache";
 import {
   login,
   logout,
@@ -631,7 +632,7 @@ export default {
         .getHotVideoInfo()
         .then((res) => {
           if (res.code === 200 && res.data) {
-            this.hotVideoList = res.data.map((item) => ({
+            const rawList = res.data.map((item) => ({
               title: item.videoTitle || item.title,
               author: item.uploaderName || item.author,
               views: item.playCount || item.views,
@@ -639,6 +640,9 @@ export default {
               cover: item.coverUrl || "",
               category: item.category,
             }));
+            Promise.all(rawList.map(v => getCachedImg(v.cover).then(url => { v.cover = url }))).finally(() => {
+              this.hotVideoList = rawList;
+            });
           } else {
             this.$message.error(res.message || "获取热门视频失败！");
           }
@@ -686,7 +690,7 @@ export default {
         .getAllVideoInfo()
         .then((res) => {
           if (res.code === 200 && res.data) {
-            this.videoList = res.data.map((item) => ({
+            const rawVideoList = res.data.map((item) => ({
               title: item.videoTitle || item.title,
               author: item.uploaderName || item.author,
               views: item.playCount || item.views,
@@ -694,7 +698,10 @@ export default {
               cover: item.coverUrl || "",
               category: item.category,
             }));
-            this.filterVideos();
+            Promise.all(rawVideoList.map(v => getCachedImg(v.cover).then(url => { v.cover = url }))).finally(() => {
+              this.videoList = rawVideoList;
+              this.filterVideos();
+            });
           } else {
             this.$message.error(res.message || "获取视频列表失败！");
           }

@@ -1,14 +1,13 @@
 <template>
-  <div class="admin-appro-container">
-    <el-card shadow="never">
-      <div slot="header" class="card-header">
-        <span class="title">📋 视频审核管理</span>
-        <el-button size="small" icon="el-icon-refresh" @click="getList"
-          >刷新数据</el-button
-        >
-      </div>
+  <div class="app-container">
+    <!-- 工具条 -->
+    <div class="tools-div">
+      <el-button size="mini" icon="el-icon-refresh" @click="getList"
+        >刷新数据</el-button
+      >
+    </div>
 
-      <el-table
+    <el-table
         :data="tableData"
         v-loading="loading"
         stripe
@@ -24,14 +23,14 @@
 
         <el-table-column label="封面" width="110" align="center">
           <template slot-scope="scope">
-            <el-image
+            <cached-image
               style="width: 80px; height: 50px; border-radius: 4px"
               :src="scope.row.image"
               fit="cover"
               :preview-src-list="[scope.row.image]"
             >
               <div slot="error" class="image-error">无封面</div>
-            </el-image>
+            </cached-image>
           </template>
         </el-table-column>
 
@@ -115,17 +114,16 @@
         </el-table-column>
       </el-table>
 
-      <div class="pagination-wrapper">
-        <el-pagination
-          background
-          layout="total, prev, pager, next"
-          :total="total"
-          :page-size="pageSize"
-          :current-page="currentPage"
-          @current-change="handlePageChange"
-        ></el-pagination>
-      </div>
-    </el-card>
+      <el-pagination
+        style="padding: 30px 0; text-align: center"
+        background
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="total"
+        :page-size="pageSize"
+        :page-sizes="[5, 10, 20]"
+        :current-page="currentPage"
+        @current-change="handlePageChange"
+      ></el-pagination>
 
     <!-- 驳回弹窗 -->
     <el-dialog
@@ -267,37 +265,20 @@ export default {
 </script>
 
 <style scoped>
-.admin-appro-container {
-  padding: 20px;
-}
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.title {
-  font-size: 16px;
-  font-weight: bold;
-}
 .image-error {
   line-height: 50px;
   text-align: center;
   color: #ccc;
   font-size: 12px;
 }
-/* 操作列居中方案 */
 .op-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 10px; /* 按钮之间的间距 */
+  gap: 10px;
 }
 .status-end {
   color: #909399;
   font-size: 13px;
-}
-.pagination-wrapper {
-  margin-top: 16px;
-  text-align: right;
 }
 </style>

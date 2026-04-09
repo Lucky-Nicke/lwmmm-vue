@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="app-container">
     <!-- 搜索栏 -->
     <div class="search-div">
       <el-form label-width="70px" size="small">

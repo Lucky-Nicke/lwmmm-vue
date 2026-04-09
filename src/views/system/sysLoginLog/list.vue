@@ -1,56 +1,47 @@
 <template>
-  <div>
+  <div class="app-container">
     <!-- 搜索框 -->
-    <div class="search-div" style="margin: 20px 10px -5px 20px; border: 1px">
-      <el-row>
-        <el-col :span="20">
-          <el-form :inline="true" class="demo-form-inline">
-            <el-form-item label="登录用户名">
-              <el-input
-                v-model="searchObj.username"
-                placeholder="输入关键字"
-                style="width: 100%"
-              ></el-input>
-            </el-form-item>
-            &nbsp;&nbsp;&nbsp;
-            <el-form-item label="登录时间">
-              <el-date-picker
-                v-model="createTimes"
-                type="datetimerange"
-                range-separator="至"
-                start-placeholder="开始时间"
-                end-placeholder="结束时间"
-                value-format="yyyy-MM-dd HH:mm:ss"
-                style="margin-right: 10px; width: 100%"
-              />
-            </el-form-item>
-            <el-form-item>
-              <el-button
-                type="primary"
-                icon="el-icon-search"
-                @click="load(1)"
-                :disabled="$hasBP('bnt.sysLoginLog.list') === false"
-                >搜索</el-button
-              >
-              <el-button icon="el-icon-refresh" @click="resetData"
-                >重置</el-button
-              >
-            </el-form-item>
-          </el-form>
-        </el-col>
-      </el-row>
+    <div class="search-div">
+      <el-form :inline="true" size="small">
+        <el-form-item label="登录用户名">
+          <el-input
+            v-model="searchObj.username"
+            placeholder="输入关键字"
+          ></el-input>
+        </el-form-item>
+        <el-form-item label="登录时间">
+          <el-date-picker
+            v-model="createTimes"
+            type="datetimerange"
+            range-separator="至"
+            start-placeholder="开始时间"
+            end-placeholder="结束时间"
+            value-format="yyyy-MM-dd HH:mm:ss"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button
+            type="primary"
+            icon="el-icon-search"
+            size="mini"
+            @click="load(1)"
+            :disabled="$hasBP('bnt.sysLoginLog.list') === false"
+            >搜索</el-button
+          >
+          <el-button icon="el-icon-refresh" size="mini" @click="resetData"
+            >重置</el-button
+          >
+        </el-form-item>
+      </el-form>
     </div>
+
+    <!-- 工具条 -->
+    <div class="tools-div">
+      <el-button type="danger" size="mini" @click="batchRemove()">批量删除</el-button>
+    </div>
+
     <!-- 表格 -->
-    <div>
-      <el-col :span="4">
-        <el-button
-          style="margin: 0 0 10px 30px"
-          type="danger"
-          @click="batchRemove()"
-          >批量删除</el-button
-        >
-      </el-col>
-      <el-table
+    <el-table
         v-loading="loading"
         :data="tableData"
         border
@@ -117,7 +108,6 @@
           </template>
         </el-table-column>
       </el-table>
-    </div>
 
     <!-- 分页 -->
     <el-pagination

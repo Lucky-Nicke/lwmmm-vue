@@ -282,7 +282,7 @@
               @click="goToVideoDetail(item.id)"
             >
               <div class="rec-cover">
-                <img :src="item.coverUrl" alt="cover" />
+                <cached-image :src="item.coverUrl" fit="cover" style="width:100%;height:100%" />
               </div>
               <div class="rec-info">
                 <div class="rec-title" :title="item.title">

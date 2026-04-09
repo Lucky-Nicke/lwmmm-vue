@@ -84,11 +84,11 @@
               ></el-table-column>
               <el-table-column label="封面" width="110" align="center">
                 <template slot-scope="scope">
-                  <el-image
+                  <cached-image
                     style="width: 80px; height: 50px; border-radius: 4px"
                     :src="scope.row.image"
                     fit="cover"
-                  ></el-image>
+                  ></cached-image>
                 </template>
               </el-table-column>
               <el-table-column
@@ -217,11 +217,11 @@
               ></el-table-column>
               <el-table-column label="封面" width="110" align="center">
                 <template slot-scope="scope">
-                  <el-image
+                  <cached-image
                     style="width: 80px; height: 50px; border-radius: 4px"
                     :src="scope.row.image"
                     fit="cover"
-                  ></el-image>
+                  ></cached-image>
                 </template>
               </el-table-column>
               <el-table-column

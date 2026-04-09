@@ -1,5 +1,5 @@
 <template>
-  <div v-loading="loading" element-loading-text="文件上传中......">
+  <div class="app-container" v-loading="loading" element-loading-text="文件上传中......">
     <!--搜索栏-->
     <div class="search-div">
       <el-form label-width="70px" size="small">

@@ -16,12 +16,14 @@ import '@/icons' // icon
 import '@/permission' // permission control
 
 import hasBtnPermission from '@/utils/btn-permission'
+import CachedImage from '@/components/CachedImage/index.vue'
 import 'viewerjs/dist/viewer.css'
 import VueViewer from 'v-viewer'
 import 'aliyun-aliplayer/build/skins/default/aliplayer-min.css';
 import Aliplayer from 'aliyun-aliplayer';
 import * as echarts from 'echarts';
 Vue.prototype.$hasBP = hasBtnPermission
+Vue.component('CachedImage', CachedImage)
 /**
  * If you don't want to use mock-server
  * you want to use MockJs for mock api

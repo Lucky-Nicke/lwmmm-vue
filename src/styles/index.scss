@@ -63,3 +63,17 @@ div:focus {
 .app-container {
   padding: 20px;
 }
+
+// 条件查询区域
+.search-div {
+  padding: 16px 20px 0;
+  margin-bottom: 10px;
+  background: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+}
+
+// 工具栏区域（添加、批量删除等按钮）
+.tools-div {
+  margin: 10px 0;
+}

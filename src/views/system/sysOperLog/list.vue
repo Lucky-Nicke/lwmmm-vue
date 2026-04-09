@@ -1,22 +1,18 @@
 <template>
-  <div>
+  <div class="app-container">
     <!-- 搜索框 -->
-    <div class="search-div" style="margin: 20px 10px -5px 20px; border: 1px">
-      <el-row>
-        <el-col :span="24">
-          <el-form :inline="true" class="demo-form-inline">
+    <div class="search-div">
+      <el-form :inline="true" size="small">
             <el-form-item label="标题">
               <el-input
                 v-model="searchObj.title"
                 placeholder="输入关键字"
-                style="width: 100%"
               ></el-input>
             </el-form-item>
             <el-form-item label="操作人员">
               <el-input
                 v-model="searchObj.operName"
                 placeholder="输入关键字"
-                style="width: 100%"
               ></el-input>
             </el-form-item>
             <el-form-item label="操作时间">
@@ -27,7 +23,6 @@
                 start-placeholder="开始时间"
                 end-placeholder="结束时间"
                 value-format="yyyy-MM-dd HH:mm:ss"
-                style="margin-right: 10px; width: 100%"
               />
             </el-form-item>
             <el-form-item>
@@ -38,18 +33,16 @@
                 >重置</el-button
               >
             </el-form-item>
-          </el-form>
-        </el-col>
-      </el-row>
+      </el-form>
     </div>
 
-    <div style="margin: 10px 30px; border: 1px">
-      <el-button type="danger" @click="batchRemove()">批量删除</el-button>
+    <!-- 工具条 -->
+    <div class="tools-div">
+      <el-button type="danger" size="mini" @click="batchRemove()">批量删除</el-button>
     </div>
 
     <!-- 表格 -->
-    <div>
-      <el-table
+    <el-table
         v-loading="loading"
         :data="tableData"
         border
@@ -116,7 +109,6 @@
           </template>
         </el-table-column>
       </el-table>
-    </div>
 
     <!-- 分页 -->
     <el-pagination

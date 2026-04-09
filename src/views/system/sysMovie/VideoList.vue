@@ -5,8 +5,8 @@
     element-loading-text="数据加载/文件上传中..."
   >
     <!-- 1. 顶部搜索与工具栏 -->
-    <div class="filter-container">
-      <el-form :inline="true" size="small" class="search-form">
+    <div class="search-div">
+      <el-form :inline="true" size="small">
         <el-form-item label="影视名称">
           <el-input
             v-model="searchObj.name"
@@ -19,15 +19,20 @@
           <el-button
             type="primary"
             icon="el-icon-search"
+            size="mini"
             @click="fetchPageList(1)"
             >搜索</el-button
           >
-          <el-button icon="el-icon-refresh" @click="resetData">重置</el-button>
-          <el-button type="success" icon="el-icon-plus" @click="add"
-            >发布新影视</el-button
-          >
+          <el-button icon="el-icon-refresh" size="mini" @click="resetData">重置</el-button>
         </el-form-item>
       </el-form>
+    </div>
+
+    <!-- 工具条 -->
+    <div class="tools-div">
+      <el-button type="success" icon="el-icon-plus" size="mini" @click="add"
+        >发布新影视</el-button
+      >
     </div>
 
     <!-- 2. 视频列表表格 (富媒体风格) -->
@@ -53,11 +58,11 @@
           <div class="video-info-cell">
             <!-- 封面图 (点击播放) -->
             <div class="cover-wrapper" @click="showPlayPage(scope.row)">
-              <el-image class="video-cover" :src="scope.row.image" fit="cover">
+              <cached-image class="video-cover" :src="scope.row.image" fit="cover">
                 <div slot="error" class="image-slot">
                   <i class="el-icon-picture-outline"></i>
                 </div>
-              </el-image>
+              </cached-image>
               <!-- 播放蒙层 -->
               <div class="play-mask"><i class="el-icon-caret-right"></i></div>
             </div>
@@ -560,10 +565,6 @@ export default {
 </script>
   
   <style lang="scss" scoped>
-.app-container {
-  padding: 20px;
-}
-
 /* 视频信息单元格样式 */
 .video-info-cell {
   display: flex;
