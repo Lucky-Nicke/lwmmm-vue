@@ -781,7 +781,7 @@ export default {
                 localStorage.setItem("userId", res.data.userId);
                 localStorage.setItem(
                   "username",
-                  res.data.name || res.data.username || this.loginForm.username
+                  res.data.username || this.loginForm.username
                 );
                 this.authVisible = false;
                 this.$message.success("登录成功！");

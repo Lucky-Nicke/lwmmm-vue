@@ -74,8 +74,8 @@ const actions = {
         }
         // 建议打印一下看看结构，确认 keys 是否一致
         console.log('User info data:', data)
-        const { name, avatar, buttons, routers } = data
-        commit('SET_NAME', name)
+        const { avatar, buttons, routers } = data
+        commit('SET_NAME', username)
         commit('SET_AVATAR', avatar)
         commit("SET_BUTTONS", buttons)
         commit("SET_MENUS", routers)

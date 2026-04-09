@@ -70,7 +70,7 @@
             </div>
 
             <el-table
-              :data="tableData"
+              :data="pagedTableData"
               v-loading="loading"
               stripe
               border
@@ -185,13 +185,24 @@
                 </template>
               </el-table-column>
             </el-table>
+            <el-pagination
+              background
+              layout="total, sizes, prev, pager, next"
+              :total="tableData.length"
+              :page-sizes="[5, 10, 20]"
+              :page-size="submissionPageSize"
+              :current-page="submissionPage"
+              @current-change="submissionPage = $event"
+              @size-change="val => { submissionPageSize = val; submissionPage = 1 }"
+              style="margin-top: 15px; text-align: right"
+            ></el-pagination>
           </div>
 
           <!-- 2. 我上传的内容区 -->
           <div v-else-if="activeMenu === 'myVideos'" key="myVideos">
             <h2 class="content-title">我上传的影视作品</h2>
             <el-table
-              :data="myVideosData"
+              :data="pagedMyVideosData"
               v-loading="loading"
               stripe
               border
@@ -260,6 +271,17 @@
                 </template>
               </el-table-column>
             </el-table>
+            <el-pagination
+              background
+              layout="total, sizes, prev, pager, next"
+              :total="myVideosData.length"
+              :page-sizes="[5, 10, 20]"
+              :page-size="myVideosPageSize"
+              :current-page="myVideosPage"
+              @current-change="myVideosPage = $event"
+              @size-change="val => { myVideosPageSize = val; myVideosPage = 1 }"
+              style="margin-top: 15px; text-align: right"
+            ></el-pagination>
           </div>
         </transition>
       </el-main>
@@ -273,6 +295,7 @@
       :close-on-click-modal="false"
       @closed="resetUploadForm"
     >
+      <div v-loading="imageUploading || videoUploading" style="min-height: 100px">
       <el-form
         ref="uploadForm"
         :model="uploadForm"
@@ -350,11 +373,13 @@
           ></el-input>
         </el-form-item>
       </el-form>
+      </div>
       <div slot="footer">
         <el-button @click="uploadDialogVisible = false">取 消</el-button>
         <el-button
           type="primary"
-          :loading="submitLoading"
+          :loading="submitLoading || imageUploading || videoUploading"
+          :disabled="imageUploading || videoUploading"
           @click="submitUploadForm"
           >确认上传</el-button
         >
@@ -395,7 +420,21 @@ export default {
         playId: "",
         director: "",
       },
+      submissionPage: 1,
+      submissionPageSize: 10,
+      myVideosPage: 1,
+      myVideosPageSize: 10,
     };
+  },
+  computed: {
+    pagedTableData() {
+      const start = (this.submissionPage - 1) * this.submissionPageSize;
+      return this.tableData.slice(start, start + this.submissionPageSize);
+    },
+    pagedMyVideosData() {
+      const start = (this.myVideosPage - 1) * this.myVideosPageSize;
+      return this.myVideosData.slice(start, start + this.myVideosPageSize);
+    },
   },
   created() {
     // 1. 检查是否存在 token
@@ -480,6 +519,7 @@ export default {
           (item) => item.approStatus === this.searchQuery.status
         );
       }
+      this.submissionPage = 1;
     },
 
     handleReset() {

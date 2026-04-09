@@ -201,10 +201,10 @@
 
         <el-form-item label="影视文件" prop="playId">
           <el-upload
+            ref="videoUpload"
             class="upload-demo"
             action="http://localhost:8085/admin/system/upload/uploadVideo"
             name="uploadVideo"
-            :limit="1"
             :on-success="handleVideoSuccess"
             :before-upload="handleBeforeUpload"
             :show-file-list="false"
@@ -488,9 +488,9 @@ export default {
     handleVideoSuccess(res, file) {
       this.loading = false;
       if (res) {
-        // 根据你的逻辑，res 是 playId
         this.sysMovie.playId = res;
         this.$message.success("视频上传成功");
+        this.$refs.videoUpload.clearFiles();
       } else {
         this.$message.error("视频上传失败");
       }
