@@ -49,9 +49,11 @@ const actions = {
       login({ username: username.trim(), password: password }).then(response => {
         const { data } = response
         commit('SET_TOKEN', data.token)
-        commit('SET_NAME', username.trim())
+        const displayName = data.name || username.trim()
+        commit('SET_NAME', displayName)
         setToken(data.token)
         localStorage.setItem('username', username.trim())
+        localStorage.setItem('nickname', displayName)
         resolve()
       }).catch(error => {
         reject(error)
@@ -79,6 +81,9 @@ const actions = {
         commit('SET_AVATAR', avatar)
         commit("SET_BUTTONS", buttons)
         commit("SET_MENUS", routers)
+        if (data.userId) {
+          localStorage.setItem('userId', data.userId)
+        }
         resolve(data)
       }).catch(error => {
         reject(error)
@@ -92,6 +97,8 @@ const actions = {
       logout(state.token).then(() => {
         removeToken()
         localStorage.removeItem('username')
+        localStorage.removeItem('userId')
+        localStorage.removeItem('nickname')
         resetRouter()
         commit('RESET_STATE')
         resolve()

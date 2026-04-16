@@ -164,13 +164,10 @@
                     @click="handleCancelReview(scope.row)"
                     >取消审核</el-button
                   >
-                  <el-button
+                  <span
                     v-if="scope.row.approStatus === 'PASS'"
-                    size="mini"
-                    type="success"
-                    plain
-                    @click="goToDetail(scope.row)"
-                    >查看视频</el-button
+                    style="color: #67c23a; font-size: 12px"
+                    >审核通过</span
                   >
                   <span
                     v-if="scope.row.approStatus === 'CANCEL'"
@@ -260,14 +257,23 @@
                   </el-tag>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="100" align="center">
+              <el-table-column label="操作" width="80" align="center">
                 <template slot-scope="scope">
-                  <el-button
-                    size="mini"
-                    type="text"
-                    @click="goToDetail(scope.row)"
-                    >详情</el-button
-                  >
+                  <template v-if="scope.row.isApproval == 1">
+                    <el-popover
+                      placement="left"
+                      trigger="hover"
+                      popper-class="action-popover"
+                    >
+                      <div class="action-grid">
+                        <el-button size="mini" type="primary" icon="el-icon-video-play" @click="goToDetail(scope.row)">详情</el-button>
+                        <el-button size="mini" type="warning" icon="el-icon-edit" @click="openEditDialog(scope.row)">编辑</el-button>
+                        <el-button size="mini" type="success" icon="el-icon-data-line" @click="goToVideoData(scope.row)">数据</el-button>
+                        <el-button size="mini" type="danger" icon="el-icon-remove-outline" @click="handleOffShelf(scope.row)">下架</el-button>
+                      </div>
+                      <el-button slot="reference" size="mini" icon="el-icon-more" circle></el-button>
+                    </el-popover>
+                  </template>
                 </template>
               </el-table-column>
             </el-table>
@@ -286,6 +292,76 @@
         </transition>
       </el-main>
     </el-container>
+
+    <!-- 编辑视频弹窗 -->
+    <el-dialog
+      title="修改影视信息"
+      :visible.sync="editDialogVisible"
+      width="50%"
+      :close-on-click-modal="false"
+    >
+      <el-form
+        ref="editForm"
+        :model="editMovie"
+        :rules="editRules"
+        label-width="100px"
+        size="small"
+        style="padding-right: 20px"
+      >
+        <el-form-item label="影视名称" prop="name">
+          <el-input v-model="editMovie.name" placeholder="请输入标题" />
+        </el-form-item>
+        <el-form-item label="所属栏目" prop="cid">
+          <el-select v-model="editMovie.cid" placeholder="请选择影视分类" style="width: 100%">
+            <el-option
+              v-for="item in categories"
+              :key="item.id"
+              :label="item.name"
+              :value="item.name"
+            ></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="作者/导演">
+          <el-input v-model="editMovie.director" disabled />
+        </el-form-item>
+        <el-form-item label="封面图片" prop="image">
+          <el-upload
+            class="avatar-uploader"
+            action="http://localhost:8085/admin/system/upload/uploadImage"
+            name="uploadImage"
+            :show-file-list="false"
+            :on-success="handleEditImageSuccess"
+            :before-upload="handleEditBeforeUpload"
+          >
+            <img v-if="editMovie.image" :src="editMovie.image" class="avatar" />
+            <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+            <div slot="tip" class="el-upload__tip">点击上传封面</div>
+          </el-upload>
+        </el-form-item>
+        <el-form-item label="影视文件" prop="playId">
+          <el-upload
+            ref="editVideoUpload"
+            action="http://localhost:8085/admin/system/upload/uploadVideo"
+            name="uploadVideo"
+            :on-success="handleEditVideoSuccess"
+            :before-upload="handleEditBeforeUpload"
+            :show-file-list="false"
+          >
+            <el-button size="small" type="primary" icon="el-icon-upload">上传视频文件</el-button>
+          </el-upload>
+          <div v-if="editMovie.playId" style="color: #67c23a; font-size: 12px; margin-top: 5px">
+            <i class="el-icon-check-circle"></i> 视频已上传 (ID: {{ editMovie.playId }})
+          </div>
+        </el-form-item>
+        <el-form-item label="影视描述" prop="description">
+          <el-input type="textarea" :rows="3" v-model="editMovie.description"></el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="editDialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="handleEditSave" :loading="editLoading">确 定</el-button>
+      </span>
+    </el-dialog>
 
     <!-- 上传弹窗 -->
     <el-dialog
@@ -424,6 +500,14 @@ export default {
       submissionPageSize: 10,
       myVideosPage: 1,
       myVideosPageSize: 10,
+      // 编辑弹窗
+      editDialogVisible: false,
+      editLoading: false,
+      editMovie: {},
+      editRules: {
+        name: [{ required: true, message: '请输入影视名称', trigger: 'blur' }],
+        cid: [{ required: true, message: '请选择所属栏目', trigger: 'change' }],
+      },
     };
   },
   computed: {
@@ -664,6 +748,80 @@ export default {
       };
       return map[status] || "未知";
     },
+
+    openEditDialog(row) {
+      this.editDialogVisible = true;
+      movieApi.getMovieById(row.id).then((res) => {
+        this.editMovie = res.data;
+        this.$nextTick(() => {
+          this.$refs.editForm && this.$refs.editForm.clearValidate();
+        });
+      });
+    },
+
+    handleEditBeforeUpload() {
+      this.editLoading = true;
+    },
+
+    handleEditImageSuccess(res) {
+      this.editLoading = false;
+      if (res && res.data) {
+        this.editMovie.image = res.data;
+        this.$message.success('封面上传成功');
+      } else {
+        this.$message.error('封面上传失败');
+      }
+    },
+
+    handleEditVideoSuccess(res) {
+      this.editLoading = false;
+      if (res) {
+        this.editMovie.playId = res;
+        this.$message.success('视频上传成功');
+        this.$refs.editVideoUpload && this.$refs.editVideoUpload.clearFiles();
+      } else {
+        this.$message.error('视频上传失败');
+      }
+    },
+
+    handleEditSave() {
+      this.$refs.editForm.validate((valid) => {
+        if (!valid) return this.$message.error('请按要求填写表单！');
+        this.editLoading = true;
+        movieApi.updateMovie(this.editMovie).then(() => {
+          this.$message.success('修改成功！');
+          this.editDialogVisible = false;
+          this.getMyUploadedVideos();
+        }).catch(() => {
+          this.$message.error('修改失败！');
+        }).finally(() => {
+          this.editLoading = false;
+        });
+      });
+    },
+
+    goToVideoData(row) {
+      this.$router.push(`/index/creator/video-data/${row.id}`);
+    },
+
+    async handleOffShelf(row) {
+      try {
+        await this.$confirm(`确定要下架《${row.name}》吗？`, '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        });
+        const res = await movieApi.offShelfMovie(row.id);
+        if (res.code === 200 || res.code === 20000) {
+          this.$message.success('下架成功');
+          this.getMyUploadedVideos();
+        } else {
+          this.$message.error(res.message || '下架失败');
+        }
+      } catch (e) {
+        // 用户取消
+      }
+    },
   },
 };
 </script>
@@ -723,5 +881,43 @@ export default {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 4px;
+}
+
+.action-grid .el-button {
+  margin: 0;
+  width: 100%;
+  justify-content: center;
+}
+
+.avatar-uploader .el-upload {
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.avatar-uploader .el-upload:hover {
+  border-color: #409eff;
+}
+.avatar-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+  width: 178px;
+  height: 100px;
+  line-height: 100px;
+  text-align: center;
+}
+.avatar {
+  width: 178px;
+  height: 100px;
+  display: block;
+  object-fit: cover;
 }
 </style>

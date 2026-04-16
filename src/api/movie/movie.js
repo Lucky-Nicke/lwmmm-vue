@@ -159,4 +159,12 @@ export default {
       params: { username: username } // 这里的 userId 报错未定义，因为它不知道从哪来
     });
   },
+
+  // 下架影视
+  offShelfMovie(id) {
+    return request({
+      url: `${BASE_URL}/offShelfMovie/${id}`,
+      method: 'post'
+    });
+  },
 }

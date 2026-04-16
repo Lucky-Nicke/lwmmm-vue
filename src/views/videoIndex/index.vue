@@ -10,7 +10,7 @@
         <div
           class="nav-categories"
           v-if="
-            !['VideoDetail', 'UserCenter', 'CreatorCenter'].includes(
+            !['VideoDetail', 'UserCenter', 'CreatorCenter', 'CreatorVideoData'].includes(
               $route.name
             )
           "
@@ -86,7 +86,7 @@
               <el-dropdown-item command="upload">创作中心</el-dropdown-item>
               <el-dropdown-item command="profile">个人介绍</el-dropdown-item>
               <el-dropdown-item command="history">观看记录</el-dropdown-item>
-              <el-dropdown-item command="likes">点赞列表</el-dropdown-item>
+              <el-dropdown-item command="likes">点赞记录</el-dropdown-item>
               <el-dropdown-item divided command="logout"
                 >退出登录</el-dropdown-item
               >
@@ -99,7 +99,7 @@
     <!-- 主体内容区容器，包含门户主页或视频详情页 -->
     <router-view
       v-if="
-        ['VideoDetail', 'UserCenter', 'CreatorCenter'].includes($route.name)
+        ['VideoDetail', 'UserCenter', 'CreatorCenter', 'CreatorVideoData'].includes($route.name)
       "
     ></router-view>
     <template v-else>
@@ -117,7 +117,11 @@
             <h2 v-else>当前分类：{{ activeCategory }}</h2>
             <!-- 这里原有的 <p> 标签（这里是 XX 分类的视频列表）已被删除 -->
           </div>
-          <!-- 修改轮播图：增加 !searchQuery 判断，当有搜索内容时隐藏 -->
+          <!-- ========== 【轮播图区域】开始 ==========
+               - 仅在"首页"分类且无搜索关键词时显示
+               - 数据来源：fetchHotVideos() → movieApi.getHotVideoInfo()
+               - 点击轮播项跳转到对应视频详情页 goToVideoDetail(video.id)
+               ========== 【轮播图区域】结束 ========== -->
           <div
             class="hot-videos-carousel-wrapper"
             v-if="activeCategory === '首页' && !searchQuery"
@@ -183,6 +187,10 @@
             </div>
           </transition>
         </main>
+        <!-- ========== 【排行榜侧边栏】开始 ==========
+             - 数据来源：fetchRankVideos() → movieApi.getHotWatchVideoInfo()
+             - 按播放量排序，点击跳转视频详情 goToVideoDetail(rank.id)
+             ========== 【排行榜侧边栏】结束 ========== -->
         <aside class="sidebar">
           <h3>📈 全站排行榜</h3>
           <div class="rank-list" v-loading="rankLoading">
@@ -605,6 +613,9 @@ export default {
     scrollToTop() {
       window.scrollTo({ top: 0, behavior: "smooth" });
     },
+    // ========== 【排行榜数据请求】==========
+    // 调用接口：GET /admin/system/sysMovie/getHotWatchVideoInfo
+    // 返回按播放量排序的视频列表，存入 rankList
     fetchRankVideos() {
       this.rankLoading = true;
       movieApi
@@ -626,6 +637,10 @@ export default {
           this.rankLoading = false;
         });
     },
+    // ========== 【轮播图数据请求】==========
+    // 调用接口：POST /admin/system/sysMovie/getHotVideoInfo
+    // 返回推荐/热门视频列表，映射为 { title, author, views, id, cover, category }
+    // 封面图片经过 getCachedImg 缓存处理后存入 hotVideoList
     fetchHotVideos() {
       this.hotVideoLoading = true;
       movieApi
@@ -790,6 +805,7 @@ export default {
                   "username",
                   res.data.username || this.loginForm.username
                 );
+                localStorage.setItem("nickname", res.data.name || res.data.username || this.loginForm.username);
                 this.authVisible = false;
                 this.$message.success("登录成功！");
               } else {

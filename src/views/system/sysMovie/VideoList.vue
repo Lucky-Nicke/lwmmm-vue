@@ -59,9 +59,7 @@
             <!-- 封面图 (点击播放) -->
             <div class="cover-wrapper" @click="showPlayPage(scope.row)">
               <cached-image class="video-cover" :src="scope.row.image" fit="cover">
-                <div slot="error" class="image-slot">
-                  <i class="el-icon-picture-outline"></i>
-                </div>
+                <div slot="error" style="width:100%;height:100%;background:#f5f7fa"></div>
               </cached-image>
               <!-- 播放蒙层 -->
               <div class="play-mask"><i class="el-icon-caret-right"></i></div>

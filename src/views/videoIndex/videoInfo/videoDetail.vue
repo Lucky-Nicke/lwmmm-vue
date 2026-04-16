@@ -124,7 +124,7 @@
 
               <div class="comment-content-wrap">
                 <div class="comment-user">
-                  {{ (rootComment.userId || "").replace("用户:", "User--") }}
+                  {{ rootComment.userId || "匿名用户" }}
                 </div>
                 <div class="comment-text">{{ rootComment.content }}</div>
                 <div class="comment-info">
@@ -193,9 +193,7 @@
                       class="sub-avatar"
                     ></el-avatar>
                     <div class="sub-content">
-                      <span class="sub-user">{{
-                        (child.userId || "").replace("用户:", "User--")
-                      }}</span>
+                      <span class="sub-user">{{ child.userId || "匿名用户" }}</span>
                       <span
                         class="reply-target"
                         v-if="
@@ -203,7 +201,7 @@
                           child.replyToUser !== rootComment.userId
                         "
                       >
-                        回复 @{{ child.replyToUser.replace("用户:", "") }} :
+                        回复 @{{ child.replyToUser }} :
                       </span>
                       <span class="sub-text">{{ child.content }}</span>
                       <div class="sub-info">
@@ -273,7 +271,7 @@
         </div>
 
         <div class="recommend-section">
-          <h3 class="recommend-title">相关推荐</h3>
+          <h3 class="recommend-title">推荐视频</h3>
           <div class="recommend-list">
             <div
               class="recommend-item"
@@ -376,7 +374,7 @@ export default {
   },
   computed: {
     currentUserId() {
-      return this.$store.getters.id || this.remoteUserId || null;
+      return this.$store.getters.name || localStorage.getItem("nickname") || localStorage.getItem("username") || null;
     },
     checkDescOverflow() {
       this.$nextTick(() => {
@@ -414,27 +412,9 @@ export default {
     // 1. 根据 localStorage 的 userid 判断是否是自己的评论
     isMyComment(commentUserId) {
       if (!commentUserId) return false;
-
-      // 使用你 computed 里的 currentUserId (它结合了 Vuex 和 localStorage)
       const localUserId = this.currentUserId;
       if (!localUserId) return false;
-
-      // 处理后端返回的数据，兼容数字或 "用户:123" 这种格式
-      let cId = String(commentUserId);
-      if (cId.includes(":")) {
-        cId = cId.split(":")[1]; // 把 "用户:123" 截取成 "123"
-      }
-
-      // 【关键】打印出来看看，到底哪里对不上！
-      console.log(
-        "该条评论的用户ID:",
-        cId,
-        " | 当前登录的用户ID:",
-        localUserId
-      );
-
-      // 将两边都转为字符串比较，防止 1 !== "1"
-      return String(cId) === String(localUserId);
+      return String(commentUserId) === String(localUserId);
     },
 
     // 2. 删除评论逻辑（带二次确认与刷新）
@@ -663,11 +643,8 @@ export default {
         return;
       }
       this.activeReplyId = comment.id;
-      const rawId = comment.userId || "";
-      this.replyTargetName = rawId.replace("用户:", ""); // 赋值给 placeholder 显示
-      this.replyTargetUserId = rawId.includes(":")
-        ? rawId.split(":")[1]
-        : rawId;
+      this.replyTargetName = comment.userId || "";
+      this.replyTargetUserId = comment.userId || "";
       this.replyContent = "";
     },
 
@@ -723,9 +700,7 @@ export default {
           const detailRes = detailResult.value;
           const vData = detailRes.data ? detailRes.data : detailRes;
           if (
-            (detailRes.code === 200 && detailRes.data) ||
-            vData.videoId ||
-            vData.name
+            detailRes.code === 200 && detailRes.data && vData.videoId
           ) {
             this.video = vData;
             this.sortedDanmakuList =
@@ -745,11 +720,13 @@ export default {
               this.checkDescOverflow();
             });
           } else {
-            this.$message.error("获取视频详情失败");
+            this.$message.warning("视频不见了~");
+            this.$router.replace("/index");
           }
         } else {
           console.error("视频详情请求失败:", detailResult.reason);
-          this.$message.error("获取视频详情失败");
+          this.$message.warning("视频不见了~");
+          this.$router.replace("/index");
         }
         // 处理热门视频
         if (hotResult.status === "fulfilled") {
@@ -1070,6 +1047,8 @@ export default {
   border-radius: 6px;
   overflow: hidden;
   position: relative;
+  isolation: isolate;
+  z-index: 0;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 
   .prism-player {

@@ -110,7 +110,7 @@
               </el-form>
             </el-tab-pane>
 
-            <el-tab-pane label="账号安全" name="security">
+            <el-tab-pane label="修改密码" name="security">
               <el-form
                 ref="pwdForm"
                 :model="passwordForm"
@@ -162,8 +162,6 @@
 </template>
   
   <script>
-import { mapGetters } from "vuex";
-// 导入你提供的 API 接口
 import { getLessInfo, resetPassword } from "@/api/user";
 import userApi from "@/api/user/user";
 
@@ -225,8 +223,6 @@ export default {
     };
   },
   computed: {
-    // 从 vuex 中获取 token，供 getInfo 接口使用
-    ...mapGetters(["token"]),
   },
   created() {
     this.fetchUserInfo();
@@ -234,8 +230,12 @@ export default {
   methods: {
     // 1. 获取用户信息
     fetchUserInfo() {
-      // 传入 vuex 中的 token
-      getLessInfo(this.token)
+      const userId = localStorage.getItem("userId");
+      if (!userId) {
+        this.$message.error("未获取到用户信息，请重新登录");
+        return;
+      }
+      getLessInfo(userId)
         .then((res) => {
           if (res.code === 200) {
             this.userInfo = res.data;

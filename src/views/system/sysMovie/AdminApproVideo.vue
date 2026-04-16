@@ -8,7 +8,7 @@
     </div>
 
     <el-table
-        :data="tableData"
+        :data="pagedData"
         v-loading="loading"
         stripe
         border
@@ -29,7 +29,7 @@
               fit="cover"
               :preview-src-list="[scope.row.image]"
             >
-              <div slot="error" class="image-error">无封面</div>
+              <div slot="error" style="width:100%;height:100%;background:#f5f7fa"></div>
             </cached-image>
           </template>
         </el-table-column>
@@ -123,6 +123,7 @@
         :page-sizes="[5, 10, 20]"
         :current-page="currentPage"
         @current-change="handlePageChange"
+        @size-change="handleSizeChange"
       ></el-pagination>
 
     <!-- 驳回弹窗 -->
@@ -167,6 +168,12 @@ export default {
       rejectDialogVisible: false,
       rejectForm: { videoId: null, approDesc: "" },
     };
+  },
+  computed: {
+    pagedData() {
+      const start = (this.currentPage - 1) * this.pageSize;
+      return this.tableData.slice(start, start + this.pageSize);
+    },
   },
   created() {
     this.getList();
@@ -259,6 +266,10 @@ export default {
 
     handlePageChange(page) {
       this.currentPage = page;
+    },
+    handleSizeChange(size) {
+      this.pageSize = size;
+      this.currentPage = 1;
     },
   },
 };

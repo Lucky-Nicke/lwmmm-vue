@@ -153,8 +153,12 @@ export default {
               }
             })
             .catch((error) => {
-              // axios 拦截器 reject 掉的错误都走这里
-              this.$message.error("用户名或密码错误，请重新输入！");
+              const msg = error && error.message
+              if (!msg || msg.toLowerCase().includes('bad credentials')) {
+                this.$message.error('用户名或密码错误，请重新输入！')
+              } else {
+                this.$message.error(msg)
+              }
               this.loading = false;
             });
         } else {

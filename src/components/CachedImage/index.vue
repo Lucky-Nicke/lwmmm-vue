@@ -1,7 +1,8 @@
 <template>
   <el-image v-bind="$attrs" :src="cachedSrc" v-on="$listeners">
     <slot v-for="(_, name) in $slots" :name="name" :slot="name" />
-    <div v-if="!cachedSrc" slot="error" style="width:100%;height:100%;background:#f5f7fa"></div>
+    <div slot="error" style="width:100%;height:100%;background:#f5f7fa"></div>
+    <div slot="placeholder" style="width:100%;height:100%;background:#f5f7fa"></div>
   </el-image>
 </template>
 

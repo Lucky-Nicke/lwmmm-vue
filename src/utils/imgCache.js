@@ -1,31 +1,32 @@
-// 全局图片内存缓存
-// key: 原始 URL，value: blob URL
-const cache = new Map()
-// 正在请求中的 Promise，防止同一 URL 并发重复请求
+// 已预加载完成的 URL 集合（浏览器磁盘/内存缓存会接管后续请求）
+const loaded = new Set()
+// 正在加载中的 Promise，防止同一 URL 并发重复触发
 const pending = new Map()
 
 /**
- * 获取缓存的图片 blob URL，若未缓存则 fetch 后存入
- * @param {string} url 原始图片 URL
- * @returns {Promise<string>} blob URL
+ * 预加载图片，确保浏览器缓存命中后返回原始 URL
+ * 不使用 fetch/blob，避免跨域 CORS 报错
+ * @param {string} url
+ * @returns {Promise<string>}
  */
 export function getCachedImg(url) {
   if (!url) return Promise.resolve('')
-  if (cache.has(url)) return Promise.resolve(cache.get(url))
+  if (loaded.has(url)) return Promise.resolve(url)
   if (pending.has(url)) return pending.get(url)
 
-  const p = fetch(url)
-    .then(res => res.blob())
-    .then(blob => {
-      const blobUrl = URL.createObjectURL(blob)
-      cache.set(url, blobUrl)
+  const p = new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      loaded.add(url)
       pending.delete(url)
-      return blobUrl
-    })
-    .catch(() => {
+      resolve(url)
+    }
+    img.onerror = () => {
       pending.delete(url)
-      return url // 失败时降级返回原始 URL
-    })
+      resolve(url) // 加载失败也返回原始 URL，交给 el-image 的 error slot 处理
+    }
+    img.src = url
+  })
 
   pending.set(url, p)
   return p
@@ -33,8 +34,7 @@ export function getCachedImg(url) {
 
 /**
  * Vue 指令：v-cached-img
- * 用法：<img v-cached-img="src" /> 或 <el-image v-cached-img="src" />
- * 会将元素的 src 替换为 blob URL
+ * 用法：<img v-cached-img="src" />
  */
 export const cachedImgDirective = {
   bind(el, binding) {
@@ -49,11 +49,8 @@ export const cachedImgDirective = {
 
 function applyCache(el, url) {
   if (!url) return
-  getCachedImg(url).then(blobUrl => {
-    // 兼容 <img> 和 el-image（内部是 <img>）
+  getCachedImg(url).then(resolvedUrl => {
     const img = el.tagName === 'IMG' ? el : el.querySelector('img')
-    if (img) img.src = blobUrl
-    // 同时更新 src attribute 供 el-image 内部使用
-    if (el.tagName !== 'IMG') el.setAttribute('data-cached-src', blobUrl)
+    if (img) img.src = resolvedUrl
   })
 }

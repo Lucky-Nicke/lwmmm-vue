@@ -97,8 +97,15 @@ export const constantRoutes = [
       {
         path: 'creator',
         name: 'CreatorCenter',
-        component: () => import('@/views/videoIndex/userInfo/CreatorCenter.vue'), // 刚才新建的文件路径
+        component: () => import('@/views/videoIndex/userInfo/CreatorCenter.vue'),
         meta: { title: '创作中心' }
+      },
+      {
+        path: 'creator/video-data/:id',
+        name: 'CreatorVideoData',
+        component: () => import('@/views/system/sysMovie/VideoDetail.vue'),
+        hidden: true,
+        meta: { title: '视频数据', noCache: true }
       }
     ]
   },

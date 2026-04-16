@@ -44,7 +44,7 @@
             :class="{ active: activeTab === 'likes' }"
             @click="switchTab('likes')"
           >
-            <i class="el-icon-star-off"></i> 点赞列表
+            <i class="el-icon-star-off"></i> 点赞记录
           </li>
         </ul>
       </aside>
@@ -155,9 +155,9 @@
             <div v-else class="empty-state">暂无观看记录</div>
           </div>
 
-          <!-- 3. 点赞列表面板 -->
+          <!-- 3. 点赞记录面板 -->
           <div v-if="activeTab === 'likes'" key="likes" class="uc-panel">
-            <h2 class="panel-title">点赞列表</h2>
+            <h2 class="panel-title">点赞记录</h2>
             <div class="video-grid" v-if="likesList.length > 0">
               <div
                 class="video-card clickable"
