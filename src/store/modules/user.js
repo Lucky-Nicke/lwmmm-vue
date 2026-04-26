@@ -52,8 +52,8 @@ const actions = {
         const displayName = data.name || username.trim()
         commit('SET_NAME', displayName)
         setToken(data.token)
-        localStorage.setItem('username', username.trim())
-        localStorage.setItem('nickname', displayName)
+        sessionStorage.setItem('username', username.trim())
+        sessionStorage.setItem('nickname', displayName)
         resolve()
       }).catch(error => {
         reject(error)
@@ -64,7 +64,7 @@ const actions = {
   getInfo({ commit, state }) {
     return new Promise((resolve, reject) => {
       // 确保 state.name 或从本地存储获取的用户名是正确的
-      const username = state.name || localStorage.getItem('username');
+      const username = state.name || sessionStorage.getItem('username');
 
       getInfo(username).then(response => {
         // 注意：这里要看你的拦截器封装。
@@ -82,7 +82,7 @@ const actions = {
         commit("SET_BUTTONS", buttons)
         commit("SET_MENUS", routers)
         if (data.userId) {
-          localStorage.setItem('userId', data.userId)
+          sessionStorage.setItem('userId', data.userId)
         }
         resolve(data)
       }).catch(error => {
@@ -96,9 +96,9 @@ const actions = {
     return new Promise((resolve, reject) => {
       logout(state.token).then(() => {
         removeToken()
-        localStorage.removeItem('username')
-        localStorage.removeItem('userId')
-        localStorage.removeItem('nickname')
+        sessionStorage.removeItem('username')
+        sessionStorage.removeItem('userId')
+        sessionStorage.removeItem('nickname')
         resetRouter()
         commit('RESET_STATE')
         resolve()

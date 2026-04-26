@@ -197,7 +197,7 @@ export default {
         await this.$confirm(`确定审核通过《${row.videoName}》吗？`, "提示", {
           type: "success",
         });
-        const userId = localStorage.getItem("userId");
+        const userId = sessionStorage.getItem("userId");
         const res = await movieApi.doApproval({
           videoId: row.videoId,
           approStatus: "SUCC",
@@ -220,7 +220,7 @@ export default {
         return this.$message.warning("请填写驳回原因");
       this.submitLoading = true;
       try {
-        const userId = localStorage.getItem("userId");
+        const userId = sessionStorage.getItem("userId");
         const res = await movieApi.doApproval({
           ...this.rejectForm,
           approStatus: "FAIL",

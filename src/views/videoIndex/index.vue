@@ -4,7 +4,7 @@
     <nav class="navbar">
       <div class="nav-left">
         <!-- 点击 Logo 返回门户主页 -->
-        <a href="#" class="logo" @click="$router.push('/index')"
+        <a href="#" class="logo" @click.prevent="$router.push('/index')"
           >影视管理系统 📺</a
         >
         <div
@@ -579,7 +579,7 @@ export default {
     // 1. 页面加载时检查登录状态并同步本地存储
     checkLoginStatus() {
       const token = getToken();
-      const userId = localStorage.getItem("userId");
+      const userId = sessionStorage.getItem("userId");
       if (token && userId) {
         getLessInfo(userId)
           .then((res) => {
@@ -599,8 +599,12 @@ export default {
     // 辅助方法：统一清理本地用户数据
     clearLocalUserData() {
       removeToken();
+      sessionStorage.removeItem("userId");
+      sessionStorage.removeItem("username");
+      sessionStorage.removeItem("nickname");
       localStorage.removeItem("userId");
       localStorage.removeItem("username");
+      localStorage.removeItem("nickname");
       this.userInfo.avatar = "";
     },
     goToVideoDetail(videoId) {
@@ -800,12 +804,12 @@ export default {
               if (res.code === 200 && res.data) {
                 this.userInfo.avatar = res.data.avatar || "";
                 this.isLogin = true;
-                localStorage.setItem("userId", res.data.userId);
-                localStorage.setItem(
+                sessionStorage.setItem("userId", res.data.userId);
+                sessionStorage.setItem(
                   "username",
                   res.data.username || this.loginForm.username
                 );
-                localStorage.setItem("nickname", res.data.name || res.data.username || this.loginForm.username);
+                sessionStorage.setItem("nickname", res.data.name || res.data.username || this.loginForm.username);
                 this.authVisible = false;
                 this.$message.success("登录成功！");
               } else {

@@ -230,7 +230,7 @@ export default {
   methods: {
     // 1. 获取用户信息
     fetchUserInfo() {
-      const userId = localStorage.getItem("userId");
+      const userId = sessionStorage.getItem("userId");
       if (!userId) {
         this.$message.error("未获取到用户信息，请重新登录");
         return;

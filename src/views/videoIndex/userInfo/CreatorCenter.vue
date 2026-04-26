@@ -562,7 +562,7 @@ export default {
     async getMyUploadedVideos() {
       this.loading = true;
       try {
-        const username = localStorage.getItem("username");
+        const username = sessionStorage.getItem("username");
         if (!username) {
           this.$message.error("用户信息已失效，请重新登录");
           return;
@@ -584,7 +584,7 @@ export default {
     async getList() {
       this.loading = true;
       try {
-        const userId = localStorage.getItem("userId");
+        const userId = sessionStorage.getItem("userId");
         const res = await movieApi.showApproveRecord(userId);
         if (res.code === 200 || res.code === 20000) {
           this.allTableData = res.data || [];
@@ -665,8 +665,8 @@ export default {
       try {
         const finalData = {
           movie: { ...this.uploadForm, isApproval: "0" },
-          userId: localStorage.getItem("userId"),
-          username: localStorage.getItem("username"),
+          userId: sessionStorage.getItem("userId"),
+          username: sessionStorage.getItem("username"),
         };
         const res = await movieApi.userUploadVideo(finalData);
         if (res.code === 200 || res.code === 20000) {
@@ -691,7 +691,7 @@ export default {
     },
 
     openUploadDialog() {
-      this.uploadForm.director = localStorage.getItem("username") || "";
+      this.uploadForm.director = sessionStorage.getItem("username") || "";
       this.uploadDialogVisible = true;
     },
     
@@ -720,7 +720,7 @@ export default {
           type: "warning",
         });
         const res = await movieApi.doUserCancelApproval(
-          localStorage.getItem("userId"),
+          sessionStorage.getItem("userId"),
           row.videoId
         );
         if (res.code === 200 || res.code === 20000) {

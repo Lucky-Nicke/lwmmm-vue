@@ -383,7 +383,7 @@ export default {
 
       // 2. 获取缓存中的用户名
       // 提示：如果你的 username 是存在 JSON 对象里的，记得 JSON.parse()
-      const currentUsername = localStorage.getItem("username") || "未知用户";
+      const currentUsername = sessionStorage.getItem("username") || "未知用户";
       // 3. 重置并赋初始值
       this.sysMovie = {
         username: currentUsername, // 默认锁定当前登录人

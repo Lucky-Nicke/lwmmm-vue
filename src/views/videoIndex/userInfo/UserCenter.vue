@@ -133,25 +133,34 @@
           <!-- 2. 观看记录面板 -->
           <div v-if="activeTab === 'history'" key="history" class="uc-panel">
             <h2 class="panel-title">观看记录</h2>
-            <div class="video-grid" v-if="historyList.length > 0">
+            <template v-if="historyList.length > 0">
               <div
-                class="video-card clickable"
-                v-for="video in historyList"
-                :key="video.id"
-                @click="goToVideoDetail(video)"
+                class="date-group"
+                v-for="group in groupedHistoryList"
+                :key="group.date"
               >
-                <div
-                  class="video-cover"
-                  :style="{ backgroundImage: 'url(' + video.cover + ')' }"
-                ></div>
-                <div class="video-info">
-                  <div class="video-title">{{ video.title }}</div>
-                  <div class="video-meta">
-                    <span>观看于: {{ video.time }}</span>
+                <div class="date-label">{{ group.date }}</div>
+                <div class="video-grid">
+                  <div
+                    class="video-card clickable"
+                    v-for="video in group.videos"
+                    :key="video.id"
+                    @click="goToVideoDetail(video)"
+                  >
+                    <div
+                      class="video-cover"
+                      :style="{ backgroundImage: 'url(' + video.cover + ')' }"
+                    ></div>
+                    <div class="video-info">
+                      <div class="video-title">{{ video.title }}</div>
+                      <div class="video-meta">
+                        <span>{{ formatTime(video.time) }}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </template>
             <div v-else class="empty-state">暂无观看记录</div>
           </div>
 
@@ -267,7 +276,26 @@ export default {
       }
     },
   },
+  computed: {
+    groupedHistoryList() {
+      const map = {};
+      this.historyList.forEach((video) => {
+        const date = video.time ? video.time.slice(0, 10) : "未知日期";
+        if (!map[date]) map[date] = [];
+        map[date].push(video);
+      });
+      return Object.keys(map)
+        .sort((a, b) => b.localeCompare(a))
+        .map((date) => ({ date, videos: map[date] }));
+    },
+  },
   methods: {
+    formatTime(time) {
+      if (!time) return "";
+      // 只显示时间部分 HH:mm
+      const t = time.slice(11, 16);
+      return t || time;
+    },
     // 获取 Cookie 的简单辅助函数
     getCookie(name) {
       const value = `; ${document.cookie}`;
@@ -330,7 +358,7 @@ export default {
     // 1. 获取用户信息
     async fetchUserInfo() {
       try {
-        const userId = localStorage.getItem("userId");
+        const userId = sessionStorage.getItem("userId");
         const res = await getLessInfo(userId);
         if (res.code === 200 && res.data) {
           const data = res.data;
@@ -423,8 +451,8 @@ export default {
 
     async fetchWatchLog() {
       try {
-        // 从 localStorage 获取用户ID
-        const userId = localStorage.getItem("userId");
+        // 从 sessionStorage 获取用户ID
+        const userId = sessionStorage.getItem("userId");
         const res = await userApi.userWatchLog(userId);
         let dataList = res.data || res;
         if (Array.isArray(dataList)) {
@@ -439,8 +467,8 @@ export default {
 
     async fetchLikeLog() {
       try {
-        // 从 localStorage 获取用户ID
-        const userId = localStorage.getItem("userId");
+        // 从 sessionStorage 获取用户ID
+        const userId = sessionStorage.getItem("userId");
         const res = await userApi.userLikeLog(userId);
         let dataList = res.data || res;
         if (Array.isArray(dataList)) {
@@ -664,6 +692,21 @@ export default {
 .video-meta {
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.date-group {
+  margin-bottom: 28px;
+}
+
+.date-label {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  padding: 4px 10px;
+  background: #f7f7f7;
+  border-left: 3px solid var(--primary-color);
+  border-radius: 2px;
 }
 
 .empty-state {

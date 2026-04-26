@@ -124,7 +124,7 @@
 
               <div class="comment-content-wrap">
                 <div class="comment-user">
-                  {{ rootComment.userId || "匿名用户" }}
+                  {{ rootComment.nickname || "匿名用户" }}
                 </div>
                 <div class="comment-text">{{ rootComment.content }}</div>
                 <div class="comment-info">
@@ -193,12 +193,12 @@
                       class="sub-avatar"
                     ></el-avatar>
                     <div class="sub-content">
-                      <span class="sub-user">{{ child.userId || "匿名用户" }}</span>
+                      <span class="sub-user">{{ child.nickname || "匿名用户" }}</span>
                       <span
                         class="reply-target"
                         v-if="
                           child.replyToUser &&
-                          child.replyToUser !== rootComment.userId
+                          child.replyToUser !== rootComment.nickname
                         "
                       >
                         回复 @{{ child.replyToUser }} :
@@ -374,7 +374,7 @@ export default {
   },
   computed: {
     currentUserId() {
-      return this.$store.getters.name || localStorage.getItem("nickname") || localStorage.getItem("username") || null;
+      return sessionStorage.getItem("userId") || sessionStorage.getItem("userid") || null;
     },
     checkDescOverflow() {
       this.$nextTick(() => {
@@ -409,7 +409,7 @@ export default {
     },
   },
   methods: {
-    // 1. 根据 localStorage 的 userid 判断是否是自己的评论
+    // 1. 根据 sessionStorage 的 userid 判断是否是自己的评论
     isMyComment(commentUserId) {
       if (!commentUserId) return false;
       const localUserId = this.currentUserId;
@@ -457,9 +457,9 @@ export default {
       this.$router.push({ name: "VideoDetail", params: { id } });
     },
     fetchUserInfo() {
-      // 兼容获取 localStorage 中的 userid 或 userId
+      // 兼容获取 sessionStorage 中的 userid 或 userId
       const userId =
-        localStorage.getItem("userid") || localStorage.getItem("userId");
+        sessionStorage.getItem("userid") || sessionStorage.getItem("userId");
       if (userId) {
         this.remoteUserId = userId;
       }
@@ -643,7 +643,7 @@ export default {
         return;
       }
       this.activeReplyId = comment.id;
-      this.replyTargetName = comment.userId || "";
+      this.replyTargetName = comment.nickname || "";
       this.replyTargetUserId = comment.userId || "";
       this.replyContent = "";
     },

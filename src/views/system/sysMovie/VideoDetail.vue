@@ -137,7 +137,7 @@
               width="180"
               sortable
             />
-            <el-table-column prop="sender" label="发送者ID" width="150" />
+            <el-table-column prop="sender" label="发送者" width="150" />
             <el-table-column label="操作" width="100" align="center">
               <template slot-scope="scope">
                 <el-button
@@ -492,7 +492,7 @@ export default {
           content: danmaku.content,
           color: danmaku.color,
           sendTime: danmaku.createTime,
-          sender: `用户:${danmaku.userId}`,
+          sender: `用户:${danmaku.nickname || danmaku.userId}`,
         }));
 
         // 定义一个辅助函数，用于递归处理评论并添加 parentId
@@ -501,7 +501,7 @@ export default {
             return {
               ...comment,
               id: comment.id,
-              username: comment.userId,
+              username: comment.nickname || comment.userId,
               avatar: comment.avatar,
               content: comment.content,
               likes: comment.likeCount,
